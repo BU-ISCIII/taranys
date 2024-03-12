@@ -313,6 +313,7 @@ def prompt_user_if_folder_exists(folder: str) -> bool:
 
     return True
 
+
 def query_user_yes_no(question, default):
     """Query the user to choose yes or no for the query question
 
