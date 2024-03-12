@@ -454,6 +454,7 @@ def allele_calling(
 
     """Analyze the sample file against schema to identify outbreakers
     """
+    start = time.perf_counter()
     results = []
     for assembly_file in assemblies:
         assembly_name = Path(assembly_file).stem
@@ -464,5 +465,7 @@ def allele_calling(
                 )
             }
         )
-
+    finish = time.perf_counter()
+    print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
+    # import pdb; pdb.set_trace()
     # sample_allele_obj.analyze_sample()
