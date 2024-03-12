@@ -284,6 +284,35 @@ def prompt_text(msg):
     return source
 
 
+def prompt_user_if_folder_exists(folder: str) -> bool:
+    """Prompt the user to continue if the folder exists
+
+    Args:
+        folder (str): folder path
+
+    Returns:
+        bool: True if user wants to continue
+    """
+    if folder_exists(folder):
+        q_question = (
+            "Folder "
+            + folder
+            + " already exists. Files will be overwritten. Do you want to continue?"
+        )
+        if "no" in query_user_yes_no(q_question, "no"):
+            log.info("Aborting code by user request")
+            stderr.print("[red] Exiting code. ")
+            sys.exit(1)
+    else:
+        try:
+            os.makedirs(folder)
+        except OSError as e:
+            log.info("Unable to create folder at %s with error %s", folder, e)
+            stderr.print("[red] ERROR. Unable to create folder  " + folder)
+            sys.exit(1)
+
+    return True
+
 def query_user_yes_no(question, default):
     """Query the user to choose yes or no for the query question
 
