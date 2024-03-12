@@ -103,7 +103,8 @@ class AlleleCalling:
                 # allele is labled as INF
                 return ["INF", allele_name, allele_details]
         else:
-            pdb.set_trace()
+            print("ERROR: No blast result found")
+            return ["LNF", "allele_name", "LNF"]
 
     def search_match_allele(self):
         # Create  blast db with sample file
@@ -123,7 +124,7 @@ class AlleleCalling:
             count_2 = 0
             for r_id, r_seq in alleles.items():
                 count_2 += 1
-                pdb.set_trace()
+
                 print("Running blast for ", count_2, " of ", len(alleles))
                 # create file in memory to increase speed
                 query_file = io.StringIO()
@@ -149,7 +150,7 @@ class AlleleCalling:
                     ) = self.assign_allele_type(blast_result, allele_file, allele_name)
                 except Exception as e:
                     stderr.print(f"Error: {e}")
-                    pdb.set_trace()
+
             else:
                 # Sample does not have a reference allele to be matched
                 # Keep LNF info
