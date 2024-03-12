@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: taranis_env
           environment-file: environment.yml
