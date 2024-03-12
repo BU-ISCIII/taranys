@@ -6,6 +6,7 @@ import rich.console
 
 import taranis.utils
 import taranis.blast
+import pdb
 
 # import numpy
 from collections import OrderedDict
@@ -59,10 +60,11 @@ class AlleleCalling:
 
         if len(blast_result) > 1:
             # allele is named as NIPHEM
+            column_blast_res = blast_result[0].split("\t")
+            column_blast_res[13] = column_blast_res[13].replace("-", "")
+            allele_details = get_blast_details(column_blast_res, allele_name)
+            return ["NIPHEM", allele_name, allele_details]
 
-            # Hacer un blast con la query esta secuencia y la database del alelo
-            # Create  blast db with sample file
-            pass
 
         elif len(blast_result) == 1:
             column_blast_res = blast_result[0].split("\t")
@@ -87,7 +89,7 @@ class AlleleCalling:
                     == column_blast_res[10]  # check at contig end
                     or column_blast_res[10] == 1  # check reverse at contig end
                     or column_blast_res[9]
-                    == column_blast_res[15]  # check reverse at contig start
+                    == column_blast_res[14]  # check reverse at contig start
                 ):
                     # allele is labled as PLOT
                     return ["PLOT", allele_name, allele_details]
@@ -100,12 +102,17 @@ class AlleleCalling:
             if int(column_blast_res[3]) == int(column_blast_res[4]):
                 # allele is labled as INF
                 return ["INF", allele_name, allele_details]
+        else:
+            pdb.set_trace()
 
     def search_match_allele(self):
         # Create  blast db with sample file
 
         result = {"allele_type": {}, "allele_match": {}, "allele_details": {}}
+        count = 0
         for ref_allele in self.ref_alleles:
+            count += 1
+            print(" Processing allele ", ref_allele, " ", count, " of ", len(self.ref_alleles))
             # schema_alleles = os.path.join(self.schema, ref_allele)
             # parallel in all CPUs in cluster node
             alleles = OrderedDict()
@@ -113,14 +120,17 @@ class AlleleCalling:
             with open(ref_allele, "r") as fh:
                 for record in SeqIO.parse(fh, "fasta"):
                     alleles[record.id] = str(record.seq)
-
+            count_2 = 0
             for r_id, r_seq in alleles.items():
+                count_2 += 1
+                pdb.set_trace()
+                print("Running blast for ", count_2, " of ", len(alleles))
                 # create file in memory to increase speed
                 query_file = io.StringIO()
                 query_file.write(">" + r_id + "\n" + r_seq)
                 query_file.seek(0)
                 blast_result = self.blast_obj.run_blast(
-                    query_file.read(), perc_identity=90, query_type="stdin"
+                    query_file.read(), perc_identity=90, num_threads=4, query_type="stdin"
                 )
                 if len(blast_result) > 0:
                     match_found = True
@@ -130,12 +140,16 @@ class AlleleCalling:
             if match_found:
                 allele_file = os.path.join(self.schema, os.path.basename(ref_allele))
                 # blast_result = self.blast_obj.run_blast(q_file,perc_identity=100)
-                allele_name = Path(allele_file).stem
-                (
-                    result["allele_type"][allele_name],
-                    result["allele_match"][allele_name],
-                    result["allele_details"][allele_name],
-                ) = self.assign_allele_type(blast_result, allele_file, allele_name)
+                try:
+                    allele_name = Path(allele_file).stem
+                    (
+                        result["allele_type"][allele_name],
+                        result["allele_match"][allele_name],
+                        result["allele_details"][allele_name],
+                    ) = self.assign_allele_type(blast_result, allele_file, allele_name)
+                except Exception as e:
+                    stderr.print(f"Error: {e}")
+                    pdb.set_trace()
             else:
                 # Sample does not have a reference allele to be matched
                 # Keep LNF info
