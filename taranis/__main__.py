@@ -466,6 +466,12 @@ def allele_calling(
             }
         )
     finish = time.perf_counter()
+    test_file = os.path.join(output, "test_file.csv")
+    with open(test_file, "w") as fo:
+        for result in results:
+            for key, value in result.items():
+                for allele, type in value["allele_type"].items():
+                    fo.write(f"{key},{allele},{type}\n")
     print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
     # import pdb; pdb.set_trace()
     # sample_allele_obj.analyze_sample()
