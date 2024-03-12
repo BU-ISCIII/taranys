@@ -166,3 +166,45 @@ def parallel_execution(
 ):
     allele_obj = AlleleCalling(sample_file, schema, reference_alleles, out_folder)
     return allele_obj.search_match_allele()
+
+
+def collect_data(results: list, output: str) -> None:
+    summary_result_file = os.path.join(output, "allele_calling_summary.csv")
+    sample_allele_match_file = os.path.join(output, "allele_calling_match.csv")
+    a_types = ["NIPHEM", "EXC", "PLOT", "ASM", "ALM", "INF", "LNF"]
+    summary_result = {}
+    sample_allele_match = {}
+    # get allele list
+    first_sample = list(results[0].keys())[0]
+    allele_list = sorted(results[0][first_sample]["allele_type"].keys())
+    for result in results:
+        for sample, values in result.items():
+            sum_allele_type = OrderedDict() # used for summary file
+            allele_match = {}
+            for a_type in a_types:
+                sum_allele_type[a_type] = 0
+            for allele, type in values["allele_type"].items():
+                # increase allele type count
+                sum_allele_type[type] += 1
+                # add allele name match to sample
+                allele_match[allele] = type + "_" + values["allele_match"][allele]
+            summary_result[sample] = sum_allele_type
+            sample_allele_match[sample] = allele_match
+
+    with open(summary_result_file, "w") as fo:
+        fo.write("Sample," + ",".join(a_types) + "\n")
+        for sample, counts in summary_result.items():
+            fo.write(f"{sample},")
+            for _ , count in counts.items():
+                fo.write(f"{count},")
+            fo.write("\n")
+    with open(sample_allele_match_file, "w") as fo:
+        fo.write("Sample," + ",".join(allele_list) + "\n")
+        for sample, allele_cod in sample_allele_match.items():
+            fo.write(f"{sample},")
+            for allele  in allele_list:
+                fo.write(f"{allele_cod[allele]},")
+            fo.write("\n")
+
+
+

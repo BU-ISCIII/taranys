@@ -316,6 +316,12 @@ def analyze_schema(
     default=1,
     help="Number of cpus used for execution",
 )
+@click.option(
+    "--force/--no-force",
+    required=False,
+    default=False,
+    help="Overwrite the output folder if it exists",
+)
 def reference_alleles(
     schema: str,
     output: str,
@@ -325,6 +331,7 @@ def reference_alleles(
     cluster_resolution: float,
     seed: int,
     cpus: int,
+    force: bool,
 ):
     start = time.perf_counter()
     max_cpus = taranis.utils.cpus_available()
@@ -335,23 +342,8 @@ def reference_alleles(
     schema_files = taranis.utils.get_files_in_folder(schema, "fasta")
 
     # Check if output folder exists
-    if taranis.utils.folder_exists(output):
-        q_question = (
-            "Folder "
-            + output
-            + " already exists. Files will be overwritten. Do you want to continue?"
-        )
-        if "no" in taranis.utils.query_user_yes_no(q_question, "no"):
-            log.info("Aborting code by user request")
-            stderr.print("[red] Exiting code. ")
-            sys.exit(1)
-    else:
-        try:
-            os.makedirs(output)
-        except OSError as e:
-            log.info("Unable to create folder at %s with error %s", output, e)
-            stderr.print("[red] ERROR. Unable to create folder  " + output)
-            sys.exit(1)
+    if not force:
+        _ = taranis.utils.prompt_user_if_folder_exists(output)
     """Create the reference alleles from the schema """
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=cpus) as executor:
@@ -404,6 +396,12 @@ def reference_alleles(
     type=click.Path(),
     help="Output folder to save reference alleles",
 )
+@click.option(
+    "--force/--no-force",
+    required=False,
+    default=False,
+    help="Overwrite the output folder if it exists",
+)
 @click.argument(
     "assemblies",
     callback=expand_wildcards,
@@ -412,10 +410,11 @@ def reference_alleles(
     type=click.Path(exists=True),
 )
 def allele_calling(
-    schema,
-    reference,
-    assemblies,
-    output,
+    schema: str,
+    reference: str,
+    assemblies: list,
+    output: str,
+    force: bool,
 ):
     schema_ref_files = taranis.utils.get_files_in_folder(reference, "fasta")
     if len(schema_ref_files) == 0:
@@ -424,23 +423,8 @@ def allele_calling(
         sys.exit(1)
 
     # Check if output folder exists
-    if taranis.utils.folder_exists(output):
-        q_question = (
-            "Folder "
-            + output
-            + " already exists. Files will be overwritten. Do you want to continue?"
-        )
-        if "no" in taranis.utils.query_user_yes_no(q_question, "no"):
-            log.info("Aborting code by user request")
-            stderr.print("[red] Exiting code. ")
-            sys.exit(1)
-    else:
-        try:
-            os.makedirs(output)
-        except OSError as e:
-            log.info("Unable to create folder at %s with error %s", output, e)
-            stderr.print("[red] ERROR. Unable to create {output} folder")
-            sys.exit(1)
+    if not force:
+        _ = taranis.utils.prompt_user_if_folder_exists(output)
     # Filter fasta files from reference folder
     # ref_alleles = glob.glob(os.path.join(reference, "*.fasta"))
     # Create predictions
@@ -465,13 +449,8 @@ def allele_calling(
                 )
             }
         )
+    _ = taranis.allele_calling.collect_data(results, output)
     finish = time.perf_counter()
-    test_file = os.path.join(output, "test_file.csv")
-    with open(test_file, "w") as fo:
-        for result in results:
-            for key, value in result.items():
-                for allele, type in value["allele_type"].items():
-                    fo.write(f"{key},{allele},{type}\n")
     print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
     # import pdb; pdb.set_trace()
     # sample_allele_obj.analyze_sample()
