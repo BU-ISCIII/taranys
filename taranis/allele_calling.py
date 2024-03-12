@@ -65,7 +65,6 @@ class AlleleCalling:
             allele_details = get_blast_details(column_blast_res, allele_name)
             return ["NIPHEM", allele_name, allele_details]
 
-
         elif len(blast_result) == 1:
             column_blast_res = blast_result[0].split("\t")
             column_blast_res[13] = column_blast_res[13].replace("-", "")
@@ -113,7 +112,14 @@ class AlleleCalling:
         count = 0
         for ref_allele in self.ref_alleles:
             count += 1
-            print(" Processing allele ", ref_allele, " ", count, " of ", len(self.ref_alleles))
+            print(
+                " Processing allele ",
+                ref_allele,
+                " ",
+                count,
+                " of ",
+                len(self.ref_alleles),
+            )
             # schema_alleles = os.path.join(self.schema, ref_allele)
             # parallel in all CPUs in cluster node
             alleles = OrderedDict()
@@ -131,7 +137,10 @@ class AlleleCalling:
                 query_file.write(">" + r_id + "\n" + r_seq)
                 query_file.seek(0)
                 blast_result = self.blast_obj.run_blast(
-                    query_file.read(), perc_identity=90, num_threads=4, query_type="stdin"
+                    query_file.read(),
+                    perc_identity=90,
+                    num_threads=4,
+                    query_type="stdin",
                 )
                 if len(blast_result) > 0:
                     match_found = True
@@ -179,7 +188,7 @@ def collect_data(results: list, output: str) -> None:
     allele_list = sorted(results[0][first_sample]["allele_type"].keys())
     for result in results:
         for sample, values in result.items():
-            sum_allele_type = OrderedDict() # used for summary file
+            sum_allele_type = OrderedDict()  # used for summary file
             allele_match = {}
             for a_type in a_types:
                 sum_allele_type[a_type] = 0
@@ -195,16 +204,13 @@ def collect_data(results: list, output: str) -> None:
         fo.write("Sample," + ",".join(a_types) + "\n")
         for sample, counts in summary_result.items():
             fo.write(f"{sample},")
-            for _ , count in counts.items():
+            for _, count in counts.items():
                 fo.write(f"{count},")
             fo.write("\n")
     with open(sample_allele_match_file, "w") as fo:
         fo.write("Sample," + ",".join(allele_list) + "\n")
         for sample, allele_cod in sample_allele_match.items():
             fo.write(f"{sample},")
-            for allele  in allele_list:
+            for allele in allele_list:
                 fo.write(f"{allele_cod[allele]},")
             fo.write("\n")
-
-
-
