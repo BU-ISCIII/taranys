@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import glob
+import gzip
 import io
 import logging
 import multiprocessing
@@ -383,6 +384,36 @@ def read_annotation_file(ann_file: str) -> dict:
             break
     return ann_data
 
+def read_compressed_file(file_name: str, separator: str = ",", index_key: int=None, mapping: list=[]) -> dict|str:
+    """Read the compressed file and return a dictionary using as key value
+    the mapping data if the index_key is an integer, else return the uncompressed
+    file
+
+    Args:
+        file_name (str): file to be uncompressed
+        separator (str, optional): split line according separator. Defaults to ",".
+        index_key (int, optional): index value . Defaults to None.
+        mapping (list, optional): defined the key value for dictionary. Defaults to [].
+
+    Returns:
+        dict|str: uncompresed information file
+    """    
+    out_data = {}
+    with gzip.open(file_name, "rb") as fh:
+        lines = fh.readlines()
+    if not index_key:
+        return lines[:-2]
+    for line in lines[1:]:
+        line = line.decode("utf-8")
+        s_line = line.split(separator)
+        # ignore empty lines
+        if len(s_line) == 1:
+            continue
+        key_data =s_line[index_key]
+        out_data[key_data] = {}
+        for item in mapping:
+            out_data[key_data][item[0]] = s_line[item[1]]
+    return out_data
 
 def read_fasta_file(fasta_file):
     return SeqIO.parse(fasta_file, "fasta")
