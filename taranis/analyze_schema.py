@@ -372,6 +372,7 @@ def collect_statistics(data, out_folder, output_allele_annot):
             "nucleotide sequence length",
             "star codon",
             "CDS coding",
+            "product annotation",
             "allele quality",
             "bad quality reason",
         ]
@@ -382,6 +383,7 @@ def collect_statistics(data, out_folder, output_allele_annot):
             "length",
             "start_codon_alt",
             "cds_coding",
+            "product_annotation",
             "quality",
             "reason",
         ]
