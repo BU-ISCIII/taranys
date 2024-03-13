@@ -372,9 +372,9 @@ def read_annotation_file(ann_file: str) -> dict:
 
     for line in lines:
         if "Prodigal" in line:
-            gene_match = re.search(r"(.*)[\t]Prodigal.*gene=(\w+)_.*", line)
+            gene_match = re.search(r"(.*)[\t]Prodigal.*gene=(\w+)_.*product=(.*)", line)
             if gene_match:
-                ann_data[gene_match.group(1)] = gene_match.group(2)
+                ann_data[gene_match.group(1)] = {"gene": gene_match.group(2) , "product": gene_match.group(3).strip()}
             else:
                 pred_match = re.search(r"(.*)[\t]Prodigal.*product=(\w+)_.*", line)
                 if pred_match:
