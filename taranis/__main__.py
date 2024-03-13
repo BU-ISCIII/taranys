@@ -389,6 +389,14 @@ def reference_alleles(
     help="Directory where the schema reference allele files are located. ",
 )
 @click.option(
+    "-a",
+    "--annotation",
+    required=True,
+    multiple=False,
+    type=click.Path(exists=True),
+    help="Annotation file. ",
+)
+@click.option(
     "-o",
     "--output",
     required=True,
@@ -412,6 +420,7 @@ def reference_alleles(
 def allele_calling(
     schema: str,
     reference: str,
+    annotation: str,
     assemblies: list,
     output: str,
     force: bool,
@@ -435,7 +444,8 @@ def allele_calling(
     pred_sample.training()
     pred_sample.prediction()
     """
-
+    map_pred = [["gene", 7], ["product", 8], ["allele_quality", 9]]
+    prediction_data = taranis.utils.read_compressed_file(annotation, separator=",", index_key=1, mapping=map_pred)
     """Analyze the sample file against schema to identify outbreakers
     """
     start = time.perf_counter()
@@ -445,7 +455,7 @@ def allele_calling(
         results.append(
             {
                 assembly_name: taranis.allele_calling.parallel_execution(
-                    assembly_file, schema, schema_ref_files, output
+                    assembly_file, schema, prediction_data, schema_ref_files, output
                 )
             }
         )

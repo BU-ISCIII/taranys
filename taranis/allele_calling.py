@@ -6,9 +6,7 @@ import rich.console
 
 import taranis.utils
 import taranis.blast
-import pdb
 
-# import numpy
 from collections import OrderedDict
 from pathlib import Path
 from Bio import SeqIO
@@ -25,9 +23,9 @@ stderr = rich.console.Console(
 
 class AlleleCalling:
     def __init__(
-        self, sample_file: str, schema: str, reference_alleles: list, out_folder: str
+        self, sample_file: str, schema: str, annotation:dict, reference_alleles: list, out_folder: str
     ):
-        # self.prediction = prediction
+        self.prediction_data = annotation # store prediction annotation 
         self.sample_file = sample_file
         self.schema = schema
         self.ref_alleles = reference_alleles
@@ -42,20 +40,38 @@ class AlleleCalling:
         self, blast_result: list, allele_file: str, allele_name: str
     ) -> list:
         def get_blast_details(blast_result: list, allele_name: str) -> list:
+            try:
+                gene_annotation = self.prediction_data[allele_name]["gene"]
+                product_annotation = self.prediction_data[allele_name]["product"]    
+                allele_quality = self.prediction_data[allele_name]["quality"]
+            except KeyError:
+                gene_annotation = "Not found"
+                product_annotation = "Not found"
+                allele_quality = "Not found"
+
+            if int(blast_result[10]) > int(blast_result[9]):
+                direction = "+"
+            else:
+                direction = "-"
             # get blast details
             blast_details = [
-                blast_result[0].split("_")[0],  # Core gene
-                self.s_name,
-                "gene annotation",
-                "product annotation",
-                allele_name,
-                "allele quality",
+                self.s_name, # sample name
                 blast_result[1],  # contig
-                blast_result[3],  # query length
+                allele_name, # core gene name
+                blast_result[0],  # allele gene
+                "coding", # coding allele type. To be filled later idx = 4 
+                blast_result[3], # query length
+                blast_result[4], # match length
+                blast_result[14], # contig length
                 blast_result[9],  # contig start
                 blast_result[10],  # contig end
+                direction,
+                gene_annotation,
+                product_annotation,
+                allele_quality,
                 blast_result[13],  # contig sequence
             ]
+            
             return blast_details
 
         if len(blast_result) > 1:
@@ -78,6 +94,7 @@ class AlleleCalling:
                 allele_name = grep_result[0].split(">")[1]
 
                 # allele is labled as EXACT
+                allele_details[4] = "EXC_"  + allele_details[3] 
                 return ["EXC", allele_name, allele_details]
             # check if contig is shorter than allele
             if int(column_blast_res[3]) > int(column_blast_res[4]):
@@ -91,15 +108,19 @@ class AlleleCalling:
                     == column_blast_res[14]  # check reverse at contig start
                 ):
                     # allele is labled as PLOT
+                    allele_details[4] = "PLOT_"  + allele_details[3]
                     return ["PLOT", allele_name, allele_details]
                 # allele is labled as ASM
+                allele_details[4] = "ASM_"  + allele_details[3]
                 return ["ASM", allele_name, allele_details]
             # check if contig is longer than allele
             if int(column_blast_res[3]) < int(column_blast_res[4]):
                 # allele is labled as ALM
+                allele_details[4] = "ALM_"  + allele_details[3]
                 return ["ALM", allele_name, allele_details]
             if int(column_blast_res[3]) == int(column_blast_res[4]):
                 # allele is labled as INF
+                allele_details[4] = "INF_"  + allele_details[3]
                 return ["INF", allele_name, allele_details]
         else:
             print("ERROR: No blast result found")
@@ -171,18 +192,21 @@ class AlleleCalling:
 
 
 def parallel_execution(
-    sample_file: str, schema: str, reference_alleles: list, out_folder: str
+    sample_file: str, schema: str, prediction_data: dict,reference_alleles: list, out_folder: str
 ):
-    allele_obj = AlleleCalling(sample_file, schema, reference_alleles, out_folder)
+    allele_obj = AlleleCalling(sample_file, schema, prediction_data, reference_alleles, out_folder)
     return allele_obj.search_match_allele()
 
 
 def collect_data(results: list, output: str) -> None:
     summary_result_file = os.path.join(output, "allele_calling_summary.csv")
     sample_allele_match_file = os.path.join(output, "allele_calling_match.csv")
+    sample_allele_detail_file = os.path.join(output, "matching_contig.csv")
     a_types = ["NIPHEM", "EXC", "PLOT", "ASM", "ALM", "INF", "LNF"]
+    detail_heading = ["sample", "contig", "core gene", "allele name", "codification", "query lenght", "match lengt", "contig length", "contig start", "contig stop", "direction", "gene notation", "product notation", "allele quality", "sequence"] 
     summary_result = {}
     sample_allele_match = {}
+    sample_allele_detail = {}
     # get allele list
     first_sample = list(results[0].keys())[0]
     allele_list = sorted(results[0][first_sample]["allele_type"].keys())
@@ -214,3 +238,15 @@ def collect_data(results: list, output: str) -> None:
             for allele in allele_list:
                 fo.write(f"{allele_cod[allele]},")
             fo.write("\n")
+
+    with open(sample_allele_detail_file, "w") as fo:
+        fo.write(",".join(detail_heading) + "\n")
+        for result in results:
+            for sample, values in result.items():
+                for allele, detail_value in values["allele_details"].items():
+                    fo.write(",".join(detail_value) + "\n")
+                    
+
+
+
+
