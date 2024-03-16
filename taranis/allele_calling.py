@@ -11,8 +11,6 @@ from collections import OrderedDict
 from pathlib import Path
 from Bio import SeqIO
 
-import pdb
-
 log = logging.getLogger(__name__)
 stderr = rich.console.Console(
     stderr=True,
@@ -253,7 +251,7 @@ def collect_data(results: list, output: str) -> None:
     ]
     summary_result = {}
     sample_allele_match = {}
-    sample_allele_detail = {}
+
     # get allele list
     first_sample = list(results[0].keys())[0]
     allele_list = sorted(results[0][first_sample]["allele_type"].keys())

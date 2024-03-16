@@ -99,7 +99,8 @@ class AnalyzeSchema:
                     "start_codon_alt": "standard",
                     "protein_seq": "",
                     "cds_coding": prokka_ann,
-                    "product_annotation": product_annotation,                }
+                    "product_annotation": product_annotation,
+               }
                 allele_seq[record.id] = str(record.seq)
                 a_quality[record.id]["length"] = str(len(str(record.seq)))
                 a_quality[record.id]["dna_seq"] = str(record.seq)

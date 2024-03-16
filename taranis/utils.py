@@ -375,7 +375,10 @@ def read_annotation_file(ann_file: str) -> dict:
         if "Prodigal" in line:
             gene_match = re.search(r"(.*)[\t]Prodigal.*gene=(\w+)_.*product=(.*)", line)
             if gene_match:
-                ann_data[gene_match.group(1)] = {"gene": gene_match.group(2) , "product": gene_match.group(3).strip()}
+                ann_data[gene_match.group(1)] = {
+                    "gene": gene_match.group(2),
+                    "product": gene_match.group(3).strip(),
+                }
             else:
                 pred_match = re.search(r"(.*)[\t]Prodigal.*product=(\w+)_.*", line)
                 if pred_match:
@@ -384,7 +387,10 @@ def read_annotation_file(ann_file: str) -> dict:
             break
     return ann_data
 
-def read_compressed_file(file_name: str, separator: str = ",", index_key: int=None, mapping: list=[]) -> dict|str:
+
+def read_compressed_file(
+    file_name: str, separator: str = ",", index_key: int = None, mapping: list = []
+) -> dict | str:
     """Read the compressed file and return a dictionary using as key value
     the mapping data if the index_key is an integer, else return the uncompressed
     file
@@ -397,7 +403,7 @@ def read_compressed_file(file_name: str, separator: str = ",", index_key: int=No
 
     Returns:
         dict|str: uncompresed information file
-    """    
+    """
     out_data = {}
     with gzip.open(file_name, "rb") as fh:
         lines = fh.readlines()
@@ -409,11 +415,12 @@ def read_compressed_file(file_name: str, separator: str = ",", index_key: int=No
         # ignore empty lines
         if len(s_line) == 1:
             continue
-        key_data =s_line[index_key]
+        key_data = s_line[index_key]
         out_data[key_data] = {}
         for item in mapping:
             out_data[key_data][item[0]] = s_line[item[1]]
     return out_data
+
 
 def read_fasta_file(fasta_file):
     return SeqIO.parse(fasta_file, "fasta")
