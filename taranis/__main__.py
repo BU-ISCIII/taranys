@@ -3,7 +3,6 @@ import logging
 import click
 import concurrent.futures
 import glob
-import os
 import rich.console
 import rich.logging
 import rich.traceback
