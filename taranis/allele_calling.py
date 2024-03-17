@@ -3,7 +3,6 @@ import logging
 import os
 import rich.console
 
-
 import taranis.utils
 import taranis.blast
 
@@ -47,15 +46,17 @@ class AlleleCalling:
         self, blast_result: list, allele_file: str, allele_name: str
     ) -> list:
         def get_blast_details(blast_result: list, allele_name: str) -> list:
+            match_allele_name = blast_result[0]
             try:
-                gene_annotation = self.prediction_data[allele_name]["gene"]
-                product_annotation = self.prediction_data[allele_name]["product"]
-                allele_quality = self.prediction_data[allele_name]["quality"]
+                gene_annotation = self.prediction_data[match_allele_name]["gene"]
+                product_annotation = self.prediction_data[match_allele_name]["product"]
+                allele_quality = self.prediction_data[match_allele_name][
+                    "allele_quality"
+                ].strip()
             except KeyError:
                 gene_annotation = "Not found"
                 product_annotation = "Not found"
                 allele_quality = "Not found"
-
             if int(blast_result[10]) > int(blast_result[9]):
                 direction = "+"
             else:
