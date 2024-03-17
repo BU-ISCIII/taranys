@@ -64,10 +64,10 @@ class DistanceMatrix:
             )
             stderr.print(f"{e}")
             sys.exit(1)
-
-        # Close the file handles
-        mash_distance_result.stdout.close()
-        mash_distance_result.stderr.close()
+        finally:
+            # Close the file handles
+            mash_distance_result.stdout.close()
+            mash_distance_result.stderr.close()
 
         out_data = out.decode("UTF-8").split("\n")
         allele_names = [item.split("\t")[0] for item in out_data[1:-1]]
