@@ -80,6 +80,26 @@ def get_seq_direction(allele_sequence):
     return "Error"
 
 
+def check_additional_programs_installed(software_list: list) -> None:
+    """Check if the input list of programs are installed in the system
+
+    Args:
+        software_list (list): list of programs to be checked
+    """
+    for program in software_list:
+        try:
+            _ = subprocess.run(
+                [program, "-h"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except Exception as e:
+            log.error("Program %s is not installed in the system. Error message: %s ", program, e)
+            stderr.print("[red] Program " + program + " is not installed in the system")
+            sys.exit(1)
+    return
+
 def create_annotation_files(
     fasta_file: str,
     annotation_dir: str,
