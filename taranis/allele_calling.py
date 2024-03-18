@@ -5,7 +5,7 @@ import rich.console
 
 import taranis.utils
 import taranis.blast
-
+import pdb
 from collections import OrderedDict
 from pathlib import Path
 from Bio import SeqIO
@@ -50,9 +50,7 @@ class AlleleCalling:
             try:
                 gene_annotation = self.prediction_data[match_allele_name]["gene"]
                 product_annotation = self.prediction_data[match_allele_name]["product"]
-                allele_quality = self.prediction_data[match_allele_name][
-                    "allele_quality"
-                ].strip()
+                allele_quality = self.prediction_data[match_allele_name]["allele_quality"]
             except KeyError:
                 gene_annotation = "Not found"
                 product_annotation = "Not found"
@@ -84,11 +82,36 @@ class AlleleCalling:
 
         if len(blast_result) > 1:
             # allele is named as NIPHEM
-            column_blast_res = blast_result[0].split("\t")
-            column_blast_res[13] = column_blast_res[13].replace("-", "")
-            allele_details = get_blast_details(column_blast_res, allele_name)
-            allele_details[4] = "NIPHEM_" + allele_details[3]
-            return ["NIPHEM", allele_name, allele_details]
+            multi_allele = []
+            valid_blast_result = []
+            match_full_length = 0
+            match_partial_length = 0
+            for b_result in blast_result:
+                column_blast_res = b_result.split("\t")
+                query_length =  int(column_blast_res[4]) / int(column_blast_res[3])
+                if query_length >= 0.8:
+                    valid_blast_result.append(b_result)
+                    if query_length == 1:
+                        match_full_length += 1
+                    else:
+                        match_partial_length += 1
+            pdb.set_trace()
+            for valid_result in valid_blast_result:
+                column_blast_res = valid_result.split("\t")
+                column_blast_res[13] = column_blast_res[13].replace("-", "")
+                allele_details = get_blast_details(column_blast_res, allele_name)
+                if match_full_length >= 2:
+                    allele_details[4] = "NIPHEM_" + allele_details[3]
+                    clasification = "NIPHEM"
+                elif match_full_length == 1 and match_partial_length >= 1:
+                    allele_details[4] = "NIPH_" + allele_details[3]
+                    clasification = "NIPH"
+                else:
+                    allele_details[4] = "EXC" + allele_details[3]
+                    clasification = "EXC"
+                multi_allele.append(allele_details)
+            pdb.set_trace()
+            return [clasification, allele_name, multi_allele]
 
         elif len(blast_result) == 1:
             column_blast_res = blast_result[0].split("\t")
@@ -198,6 +221,7 @@ class AlleleCalling:
                     ) = self.assign_allele_type(blast_result, allele_file, allele_name)
                 except Exception as e:
                     stderr.print(f"Error: {e}")
+                    pdb.set_trace()
 
             else:
                 # Sample does not have a reference allele to be matched
@@ -232,7 +256,7 @@ def collect_data(results: list, output: str) -> None:
     summary_result_file = os.path.join(output, "allele_calling_summary.csv")
     sample_allele_match_file = os.path.join(output, "allele_calling_match.csv")
     sample_allele_detail_file = os.path.join(output, "matching_contig.csv")
-    a_types = ["NIPHEM", "EXC", "PLOT", "ASM", "ALM", "INF", "LNF"]
+    allele_types = ["NIPHEM", "NIPH","EXC", "PLOT", "ASM", "ALM", "INF", "LNF"]
     detail_heading = [
         "sample",
         "contig",
@@ -260,23 +284,25 @@ def collect_data(results: list, output: str) -> None:
         for sample, values in result.items():
             sum_allele_type = OrderedDict()  # used for summary file
             allele_match = {}
-            for a_type in a_types:
-                sum_allele_type[a_type] = 0
-            for allele, type in values["allele_type"].items():
+            for allele_type in allele_types:
+                sum_allele_type[allele_type] = 0
+            for allele, type_of_allele in values["allele_type"].items():
                 # increase allele type count
-                sum_allele_type[type] += 1
+                sum_allele_type[type_of_allele] += 1
                 # add allele name match to sample
-                allele_match[allele] = type + "_" + values["allele_match"][allele]
+                allele_match[allele] = type_of_allele + "_" + values["allele_match"][allele]
             summary_result[sample] = sum_allele_type
             sample_allele_match[sample] = allele_match
 
+    # save summary results to file
     with open(summary_result_file, "w") as fo:
-        fo.write("Sample," + ",".join(a_types) + "\n")
+        fo.write("Sample," + ",".join(allele_types) + "\n")
         for sample, counts in summary_result.items():
             fo.write(f"{sample},")
             for _, count in counts.items():
                 fo.write(f"{count},")
             fo.write("\n")
+    # save allele match to file
     with open(sample_allele_match_file, "w") as fo:
         fo.write("Sample," + ",".join(allele_list) + "\n")
         for sample, allele_cod in sample_allele_match.items():
@@ -290,4 +316,8 @@ def collect_data(results: list, output: str) -> None:
         for result in results:
             for sample, values in result.items():
                 for allele, detail_value in values["allele_details"].items():
-                    fo.write(",".join(detail_value) + "\n")
+                    if type(detail_value[0]) is list:
+                        for detail in detail_value:
+                            fo.write(",".join(detail) + "\n")
+                    else:
+                        fo.write(",".join(detail_value) + "\n")
