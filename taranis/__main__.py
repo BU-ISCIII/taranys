@@ -217,7 +217,7 @@ def analyze_schema(
     usegenus: str,
     cpus: int,
 ):
-    _ = taranis.utils.check_additional_programs_installed(["prokka"])
+    _ = taranis.utils.check_additional_programs_installed([["prokka", "--version"]])
     schema_files = taranis.utils.get_files_in_folder(inputdir, "fasta")
 
     results = []
@@ -335,7 +335,7 @@ def reference_alleles(
     force: bool,
 ):
     _ = taranis.utils.check_additional_programs_installed(
-        ["mash", "makeblastdb", "blastn"]
+        [["mash", "--version"], ["makeblastdb", "-version"], ["blastn", "-version"]]
     )
     start = time.perf_counter()
     max_cpus = taranis.utils.cpus_available()
@@ -429,7 +429,9 @@ def allele_calling(
     output: str,
     force: bool,
 ):
-    _ = taranis.utils.check_additional_programs_installed(["blastn", "makeblastdb"])
+    _ = taranis.utils.check_additional_programs_installed(
+        [["blastn", "-version"], ["makeblastdb", "-version"]]
+    )
     schema_ref_files = taranis.utils.get_files_in_folder(reference, "fasta")
     if len(schema_ref_files) == 0:
         log.error("Referenc allele folder %s does not have any fasta file", schema)
