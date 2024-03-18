@@ -50,7 +50,9 @@ class AlleleCalling:
             try:
                 gene_annotation = self.prediction_data[match_allele_name]["gene"]
                 product_annotation = self.prediction_data[match_allele_name]["product"]
-                allele_quality = self.prediction_data[match_allele_name]["allele_quality"]
+                allele_quality = self.prediction_data[match_allele_name][
+                    "allele_quality"
+                ]
             except KeyError:
                 gene_annotation = "Not found"
                 product_annotation = "Not found"
@@ -80,40 +82,39 @@ class AlleleCalling:
 
             return blast_details
 
-        if len(blast_result) > 1:
-            # allele is named as NIPHEM
+        valid_blast_result = []
+        match_full_length = 0
+        match_partial_length = 0
+        for b_result in blast_result:
+            column_blast_res = b_result.split("\t")
+            query_length = int(column_blast_res[4]) / int(column_blast_res[3])
+            if query_length >= 0.8:
+                valid_blast_result.append(b_result)
+                if query_length == 1:
+                    match_full_length += 1
+                else:
+                    match_partial_length += 1
+
+        if len(valid_blast_result) > 1:
+            # allele could be named as NIPHEM or NIPH
             multi_allele = []
-            valid_blast_result = []
-            match_full_length = 0
-            match_partial_length = 0
-            for b_result in blast_result:
-                column_blast_res = b_result.split("\t")
-                query_length =  int(column_blast_res[4]) / int(column_blast_res[3])
-                if query_length >= 0.8:
-                    valid_blast_result.append(b_result)
-                    if query_length == 1:
-                        match_full_length += 1
-                    else:
-                        match_partial_length += 1
-            pdb.set_trace()
             for valid_result in valid_blast_result:
                 column_blast_res = valid_result.split("\t")
                 column_blast_res[13] = column_blast_res[13].replace("-", "")
                 allele_details = get_blast_details(column_blast_res, allele_name)
                 if match_full_length >= 2:
+                    # labled as NIPHEM if all alleles are in the same contig
                     allele_details[4] = "NIPHEM_" + allele_details[3]
                     clasification = "NIPHEM"
-                elif match_full_length == 1 and match_partial_length >= 1:
+                else:
+                    # labled as NIPH if all alleles are in different contigs
                     allele_details[4] = "NIPH_" + allele_details[3]
                     clasification = "NIPH"
-                else:
-                    allele_details[4] = "EXC" + allele_details[3]
-                    clasification = "EXC"
                 multi_allele.append(allele_details)
             pdb.set_trace()
             return [clasification, allele_name, multi_allele]
 
-        elif len(blast_result) == 1:
+        elif len(valid_blast_result) == 1:
             column_blast_res = blast_result[0].split("\t")
             column_blast_res[13] = column_blast_res[13].replace("-", "")
             allele_details = get_blast_details(column_blast_res, allele_name)
@@ -132,10 +133,10 @@ class AlleleCalling:
             if int(column_blast_res[3]) > int(column_blast_res[4]):
                 # check if sequence is shorter because it starts or ends at the contig
                 if (
-                    column_blast_res[9] == 1  # check  at contig start
+                    column_blast_res[9] == "1"  # check  at contig start
                     or column_blast_res[14]
                     == column_blast_res[10]  # check at contig end
-                    or column_blast_res[10] == 1  # check reverse at contig end
+                    or column_blast_res[10] == "1"  # check reverse at contig end
                     or column_blast_res[9]
                     == column_blast_res[14]  # check reverse at contig start
                 ):
@@ -164,8 +165,34 @@ class AlleleCalling:
                 )
                 return ["INF", allele_name, allele_details]
         else:
-            print("ERROR: No blast result found")
-            return ["LNF", "allele_name", "LNF"]
+            # analyze again the blast result to check with lower query size, 0.75
+            # it starts/ends at the contig. Then it is labled as PLOT
+
+            multi_allele = []
+            clasification = ""
+            for b_result in blast_result:
+                column_blast_res = b_result.split("\t")
+                query_length = int(column_blast_res[4]) / int(column_blast_res[3])
+                if query_length >= 0.75:
+                    if (
+                        column_blast_res[9] == "1"  # check  at contig start
+                        or column_blast_res[14]
+                        == column_blast_res[10]  # check at contig end
+                        or column_blast_res[10] == "1"  # check reverse at contig end
+                        or column_blast_res[9]
+                        == column_blast_res[14]  # check reverse at contig start
+                    ):
+                        allele_details = get_blast_details(
+                            column_blast_res, allele_name
+                        )
+                        # allele is labled as PLOT
+                        allele_details[4] = "PLOT_" + allele_details[3]
+                        multi_allele.append(allele_details)
+                        clasification = "PLOT"
+            if clasification == "PLOT":
+                return [clasification, allele_name, multi_allele]
+            else:
+                return ["LNF", "allele_name", "LNF"]
 
     def search_match_allele(self):
         # Create  blast db with sample file
@@ -212,24 +239,18 @@ class AlleleCalling:
             if match_found:
                 allele_file = os.path.join(self.schema, os.path.basename(ref_allele))
                 # blast_result = self.blast_obj.run_blast(q_file,perc_identity=100)
-                try:
-                    allele_name = Path(allele_file).stem
-                    (
-                        result["allele_type"][allele_name],
-                        result["allele_match"][allele_name],
-                        result["allele_details"][allele_name],
-                    ) = self.assign_allele_type(blast_result, allele_file, allele_name)
-                except Exception as e:
-                    stderr.print(f"Error: {e}")
-                    pdb.set_trace()
-
+                allele_name = Path(allele_file).stem
+                (
+                    result["allele_type"][allele_name],
+                    result["allele_match"][allele_name],
+                    result["allele_details"][allele_name],
+                ) = self.assign_allele_type(blast_result, allele_file, allele_name)
             else:
                 # Sample does not have a reference allele to be matched
                 # Keep LNF info
-                # ver el codigo de espe
-                # lnf_tpr_tag()
-                pass
-
+                result["allele_type"][allele_name] = "LNF"
+                result["allele_match"][allele_name] = allele_name
+                result["allele_details"][allele_name] = "LNF"
         return result
 
 
@@ -256,7 +277,7 @@ def collect_data(results: list, output: str) -> None:
     summary_result_file = os.path.join(output, "allele_calling_summary.csv")
     sample_allele_match_file = os.path.join(output, "allele_calling_match.csv")
     sample_allele_detail_file = os.path.join(output, "matching_contig.csv")
-    allele_types = ["NIPHEM", "NIPH","EXC", "PLOT", "ASM", "ALM", "INF", "LNF"]
+    allele_types = ["NIPHEM", "NIPH", "EXC", "PLOT", "ASM", "ALM", "INF", "LNF"]
     detail_heading = [
         "sample",
         "contig",
@@ -290,7 +311,9 @@ def collect_data(results: list, output: str) -> None:
                 # increase allele type count
                 sum_allele_type[type_of_allele] += 1
                 # add allele name match to sample
-                allele_match[allele] = type_of_allele + "_" + values["allele_match"][allele]
+                allele_match[allele] = (
+                    type_of_allele + "_" + values["allele_match"][allele]
+                )
             summary_result[sample] = sum_allele_type
             sample_allele_match[sample] = allele_match
 
