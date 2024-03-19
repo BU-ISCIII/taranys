@@ -281,16 +281,36 @@ def get_files_in_folder(folder: str, extension: str = None) -> list[str]:
     return glob.glob(folder_files)
 
 
-def grep_execution(input_file: str, pattern: str, parameters: str) -> list:
-    """_summary_
+def get_snp_position(allele_sequence: str, ref_sequences: dict[str]) -> dict[list[str]]:
+    """Get the snp position between the allele sequence and the reference alleles
 
     Args:
-        input_file (str): _description_
-        pattern (str): _description_
-        parmeters (str): _description_
+        allele_sequence (str): sequence to be compared
+        ref_sequences (dict): sequences of reference alleles
 
     Returns:
-        list: _description_
+        dict: key: ref_sequence, value: list of snp position
+    """
+    snp_data = {}
+    for ref_allele, ref_sequence in ref_sequences.items():
+        snp_position = []
+        for idx, (a, b) in enumerate(zip(allele_sequence, ref_sequence)):
+            if a != b:
+                snp_position.append([str(idx), a, b])
+        snp_data[ref_allele] = snp_position
+    return snp_data
+
+
+def grep_execution(input_file: str, pattern: str, parameters: str) -> list[str]:
+    """run grep command and return the output
+
+    Args:
+        input_file (str): input file path
+        pattern (str): pattern to be searched
+        parmeters (str): parameters to be used in grep
+
+    Returns:
+        list[str]: list of lines which match the pattern
     """
     try:
         result = subprocess.run(

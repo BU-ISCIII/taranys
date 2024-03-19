@@ -421,6 +421,18 @@ def reference_alleles(
     required=True,
     type=click.Path(exists=True),
 )
+@click.option(
+    "--snp/--no-snp",
+    required=False,
+    default=False,
+    help="Create SNP file for alleles that are infered INF",
+)
+@click.option(
+    "--alignment/--no-alignment",
+    required=False,
+    default=False,
+    help="Create aligment file for Overwrite the output folder if it exists",
+)
 def allele_calling(
     schema: str,
     reference: str,
@@ -428,6 +440,8 @@ def allele_calling(
     assemblies: list,
     output: str,
     force: bool,
+    snp: bool,
+    alignment: bool,
 ):
     _ = taranis.utils.check_additional_programs_installed(
         [["blastn", "-version"], ["makeblastdb", "-version"]]
@@ -451,6 +465,9 @@ def allele_calling(
     pred_sample.training()
     pred_sample.prediction()
     """
+    # Read the annotation file
+    stderr.print("[green] Reading annotation file")
+    log.info("Reading annotation file")
     map_pred = [["gene", 7], ["product", 8], ["allele_quality", 9]]
     prediction_data = taranis.utils.read_compressed_file(
         annotation, separator=",", index_key=1, mapping=map_pred
@@ -459,10 +476,13 @@ def allele_calling(
     inf_allele_obj = taranis.inferred_alleles.InferredAllele()
     """Analyze the sample file against schema to identify outbreakers
     """
+
     start = time.perf_counter()
     results = []
     for assembly_file in assemblies:
         assembly_name = Path(assembly_file).stem
+        stderr.print("f[green] Analyzing sample {assembly_name}")
+        log.info(f"Analyzing sample {assembly_name}")
         results.append(
             {
                 assembly_name: taranis.allele_calling.parallel_execution(
@@ -472,10 +492,13 @@ def allele_calling(
                     schema_ref_files,
                     output,
                     inf_allele_obj,
+                    snp,
+                    alignment,
                 )
             }
         )
-    _ = taranis.allele_calling.collect_data(results, output)
+
+    _ = taranis.allele_calling.collect_data(results, output, snp, alignment)
     finish = time.perf_counter()
     print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
     # sample_allele_obj.analyze_sample()

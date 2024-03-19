@@ -28,6 +28,8 @@ class AlleleCalling:
         reference_alleles: list,
         out_folder: str,
         inf_alle_obj: object,
+        snp_request: bool = False,
+        aligment_request: bool = False,
     ):
         self.prediction_data = annotation  # store prediction annotation
         self.sample_file = sample_file
@@ -41,6 +43,8 @@ class AlleleCalling:
         _ = self.blast_obj.create_blastdb(sample_file, self.blast_dir)
         # store inferred allele object
         self.inf_alle_obj = inf_alle_obj
+        self.snp_request = snp_request
+        self.aligment_request = aligment_request
 
     def assign_allele_type(
         self, blast_result: list, allele_file: str, allele_name: str
@@ -111,7 +115,6 @@ class AlleleCalling:
                     allele_details[4] = "NIPH_" + allele_details[3]
                     clasification = "NIPH"
                 multi_allele.append(allele_details)
-            pdb.set_trace()
             return [clasification, allele_name, multi_allele]
 
         elif len(valid_blast_result) == 1:
@@ -197,7 +200,12 @@ class AlleleCalling:
     def search_match_allele(self):
         # Create  blast db with sample file
 
-        result = {"allele_type": {}, "allele_match": {}, "allele_details": {}}
+        result = {
+            "allele_type": {},
+            "allele_match": {},
+            "allele_details": {},
+            "snp_data": {},
+        }
         count = 0
         for ref_allele in self.ref_alleles:
             count += 1
@@ -251,6 +259,12 @@ class AlleleCalling:
                 result["allele_type"][allele_name] = "LNF"
                 result["allele_match"][allele_name] = allele_name
                 result["allele_details"][allele_name] = "LNF"
+            if self.snp_request and result["allele_type"][allele_name] == "INF":
+                # run snp analysis
+                allele_seq = result["allele_details"][allele_name][14]
+                result["snp_data"][allele_name] = taranis.utils.get_snp_position(
+                    allele_seq, alleles
+                )
         return result
 
 
@@ -261,6 +275,8 @@ def parallel_execution(
     reference_alleles: list,
     out_folder: str,
     inf_alle_obj: object,
+    snp_request: bool = False,
+    aligment_request: bool = False,
 ):
     allele_obj = AlleleCalling(
         sample_file,
@@ -269,11 +285,15 @@ def parallel_execution(
         reference_alleles,
         out_folder,
         inf_alle_obj,
+        snp_request,
+        aligment_request,
     )
     return allele_obj.search_match_allele()
 
 
-def collect_data(results: list, output: str) -> None:
+def collect_data(
+    results: list, output: str, snp_request: bool, aligment_request: bool
+) -> None:
     summary_result_file = os.path.join(output, "allele_calling_summary.csv")
     sample_allele_match_file = os.path.join(output, "allele_calling_match.csv")
     sample_allele_detail_file = os.path.join(output, "matching_contig.csv")
@@ -344,3 +364,23 @@ def collect_data(results: list, output: str) -> None:
                             fo.write(",".join(detail) + "\n")
                     else:
                         fo.write(",".join(detail_value) + "\n")
+    if snp_request:
+        snp_file = os.path.join(output, "snp_data.csv")
+        with open(snp_file, "w") as fo:
+            fo.write("Sample name,Locus name,Reference allele,Position,Base,Ref\n")
+            for sample, values in result.items():
+                # pdb.set_trace()
+                for allele, snp_data in values["snp_data"].items():
+                    for ref_allele, snp_info_list in snp_data.items():
+                        # pdb.set_trace()
+                        for snp_info in snp_info_list:
+                            fo.write(
+                                sample
+                                + ","
+                                + allele
+                                + ","
+                                + ref_allele
+                                + ","
+                                + ",".join(snp_info)
+                                + "\n"
+                            )
