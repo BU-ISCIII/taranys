@@ -8,6 +8,7 @@ import numpy as np
 import os
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.io as pio
 import questionary
 import shutil
 
@@ -195,19 +196,30 @@ def create_graphic(
         title (str): title of the figure
     """
     fig = go.Figure()
-    if mode == "lines":
-        fig.add_trace(go.Scatter(x=x_data, y=y_data, mode=mode, name=title))
-        fig.update_layout(xaxis_title=labels[0], yaxis_title=labels[1])
-    elif mode == "pie":
-        fig.add_trace(go.Pie(labels=labels, values=x_data))
-    elif mode == "bar":
-        fig.add_trace(go.Bar(x=x_data, y=y_data))
-        fig.update_layout(xaxis_title=labels[0], yaxis_title=labels[1])
-    elif mode == "box":
-        fig.add_trace(go.Box(y=y_data))
+    layout_update = {}
+    plot_options = {
+        "lines": (go.Scatter, {"mode": mode}),
+        "pie": (go.Pie, {"labels": labels, "values": x_data}),
+        "bar": (go.Bar, {"x": x_data, "y": y_data}),
+        "box": (go.Box, {"y": y_data}),
+    }
 
-    fig.update_layout(title_text=title)
-    fig.write_image(os.path.join(out_folder, f_name))
+    if mode in plot_options:
+        trace_class, trace_kwargs = plot_options[mode]
+        fig.add_trace(trace_class(**trace_kwargs))
+        if mode == "bar":
+            layout_update = {
+                "xaxis_title": labels[0],
+                "yaxis_title": labels[1],
+                "xaxis_tickangle": 45,
+            }
+    else:
+        raise ValueError(f"Unsupported mode: {mode}")
+
+    layout_update["title_text"] = title
+    fig.update_layout(**layout_update)
+
+    pio.write_image(fig, os.path.join(out_folder, f_name))
     return
 
 

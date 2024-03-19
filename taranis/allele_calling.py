@@ -5,7 +5,7 @@ import rich.console
 
 import taranis.utils
 import taranis.blast
-import pdb
+
 from collections import OrderedDict
 from pathlib import Path
 from Bio import SeqIO
@@ -294,6 +294,35 @@ def parallel_execution(
 def collect_data(
     results: list, output: str, snp_request: bool, aligment_request: bool
 ) -> None:
+    def stats_graphics(stats_folder: str, summary_result: dict) -> None:
+        stderr.print("Creating graphics")
+        log.info("Creating graphics")
+        allele_types = ["NIPHEM", "NIPH", "EXC", "PLOT", "ASM", "ALM", "INF", "LNF"]
+        # inizialize classification data
+        classif_data = {}
+        for allele_type in allele_types:
+            classif_data[allele_type] = []
+        graphic_folder = os.path.join(stats_folder, "graphics")
+
+        _ = taranis.utils.create_new_folder(graphic_folder)
+        s_list = []
+        # collecting data to create graphics
+        for sample, classif_counts in summary_result.items():
+            s_list.append(sample)  # create list of samples
+            for classif, count in classif_counts.items():
+                classif_data[classif].append(int(count))
+        # create graphics
+        for allele_type, counts in classif_data.items():
+            _ = taranis.utils.create_graphic(
+                graphic_folder,
+                str(allele_type + "_graphic.png"),
+                "bar",
+                s_list,
+                counts,
+                ["Samples", "number"],
+                str("Number of " + allele_type + " in samples"),
+            )
+
     summary_result_file = os.path.join(output, "allele_calling_summary.csv")
     sample_allele_match_file = os.path.join(output, "allele_calling_match.csv")
     sample_allele_detail_file = os.path.join(output, "matching_contig.csv")
@@ -315,6 +344,7 @@ def collect_data(
         "allele quality",
         "sequence",
     ]
+
     summary_result = {}
     sample_allele_match = {}
 
@@ -384,3 +414,5 @@ def collect_data(
                                 + ",".join(snp_info)
                                 + "\n"
                             )
+    # Create graphics
+    stats_graphics(output, summary_result)
