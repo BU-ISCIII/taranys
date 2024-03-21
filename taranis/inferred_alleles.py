@@ -1,3 +1,6 @@
+import pdb
+
+
 class InferredAllele:
     def __init__(self):
         self.inferred_seq = {}
@@ -23,6 +26,8 @@ class InferredAllele:
             sequence (str): sequence to infer the allele
             allele (str): inferred allele
         """
-        inf_value = self.last_allele_index.get(allele, 0) + 1
-        self.inferred_seq[sequence] = inf_value
+        if allele not in self.last_allele_index:
+            self.last_allele_index[allele] = 0
+        self.last_allele_index[allele] += 1
+        self.inferred_seq[sequence] = self.last_allele_index[allele]
         return self.inferred_seq[sequence]

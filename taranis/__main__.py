@@ -433,6 +433,14 @@ def reference_alleles(
     default=False,
     help="Create aligment file for Overwrite the output folder if it exists",
 )
+@click.option(
+    "--cpus",
+    required=False,
+    multiple=False,
+    type=int,
+    default=1,
+    help="Number of cpus used for execution",
+)
 def allele_calling(
     schema: str,
     reference: str,
@@ -442,6 +450,7 @@ def allele_calling(
     force: bool,
     snp: bool,
     alignment: bool,
+    cpus: int,
 ):
     _ = taranis.utils.check_additional_programs_installed(
         [["blastn", "-version"], ["makeblastdb", "-version"]]
@@ -457,14 +466,7 @@ def allele_calling(
         _ = taranis.utils.prompt_user_if_folder_exists(output)
     # Filter fasta files from reference folder
     # ref_alleles = glob.glob(os.path.join(reference, "*.fasta"))
-    # Create predictions
 
-    """
-    pred_out = os.path.join(output, "prediction")
-    pred_sample = taranis.prediction.Prediction(genome, sample, pred_out)
-    pred_sample.training()
-    pred_sample.prediction()
-    """
     # Read the annotation file
     stderr.print("[green] Reading annotation file")
     log.info("Reading annotation file")
@@ -479,24 +481,27 @@ def allele_calling(
 
     start = time.perf_counter()
     results = []
-    for assembly_file in assemblies:
-        assembly_name = Path(assembly_file).stem
-        stderr.print("f[green] Analyzing sample {assembly_name}")
-        log.info(f"Analyzing sample {assembly_name}")
-        results.append(
-            {
-                assembly_name: taranis.allele_calling.parallel_execution(
-                    assembly_file,
-                    schema,
-                    prediction_data,
-                    schema_ref_files,
-                    output,
-                    inf_allele_obj,
-                    snp,
-                    alignment,
-                )
-            }
-        )
+    with concurrent.futures.ThreadPoolExecutor(max_workers=cpus) as executor:
+        futures = [
+            executor.submit(
+                taranis.allele_calling.parallel_execution,
+                assembly_file,
+                schema,
+                prediction_data,
+                schema_ref_files,
+                output,
+                inf_allele_obj,
+                snp,
+                alignment,
+            )
+            for assembly_file in assemblies
+        ]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception as e:
+                print(e)
+                continue
 
     _ = taranis.allele_calling.collect_data(results, output, snp, alignment)
     finish = time.perf_counter()
