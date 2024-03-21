@@ -63,6 +63,11 @@ POSIBLE_BAD_QUALITY = [
 
 
 def cpus_available() -> int:
+    """Get the number of cpus available in the system
+
+    Returns:
+        int: number of cpus
+    """
     return multiprocessing.cpu_count()
 
 
@@ -252,10 +257,13 @@ def file_exists(file_to_check):
     return False
 
 
+""" 
 def find_nearest_numpy_value(array, value):
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return array[idx]
+
+ """
 
 
 def folder_exists(folder_to_check):
@@ -270,6 +278,28 @@ def folder_exists(folder_to_check):
     if os.path.isdir(folder_to_check):
         return True
     return False
+
+
+def get_alignment_data(allele_sequence: str, ref_sequences: dict[str]) -> dict:
+    """Get the alignment data between the allele sequence and the reference alleles
+
+    Args:
+        allele_sequence (str): sequence to be compared
+        ref_sequences (dict): sequences of reference alleles
+
+    Returns:
+        dict: key: ref_sequence, value: alignment data
+    """
+    alignment_data = {}
+    for ref_allele, ref_sequence in ref_sequences.items():
+        alignment = ""
+        for idx, (a, b) in enumerate(zip(allele_sequence, ref_sequence)):
+            if a == b:
+                alignment += "|"
+            else:
+                alignment += " "
+        alignment_data[ref_allele] = [ref_sequence, alignment, allele_sequence]
+    return alignment_data
 
 
 def get_files_in_folder(folder: str, extension: str = None) -> list[str]:
@@ -332,7 +362,7 @@ def grep_execution(input_file: str, pattern: str, parameters: str) -> list[str]:
             text=True,
         )
     except subprocess.CalledProcessError as e:
-        log.error("Unable to run grep. Error message: %s ", e)
+        log.debug("Unable to run grep. Error message: %s ", e)
         return []
     return result.stdout.split("\n")
 

@@ -145,28 +145,29 @@ class AlleleCalling:
                 ):
                     # allele is labled as PLOT
                     allele_details[4] = "PLOT_" + allele_details[3]
-                    return ["PLOT", allele_name, allele_details]
+                    return ["PLOT", allele_details[3], allele_details]
                 # allele is labled as ASM
                 allele_details[4] = "ASM_" + allele_details[3]
-                return ["ASM", allele_name, allele_details]
+                return ["ASM", allele_details[3], allele_details]
             # check if contig is longer than allele
             if int(column_blast_res[3]) < int(column_blast_res[4]):
                 # allele is labled as ALM
                 allele_details[4] = "ALM_" + allele_details[3]
-                return ["ALM", allele_name, allele_details]
+                return ["ALM", allele_details[3], allele_details]
             if int(column_blast_res[3]) == int(column_blast_res[4]):
                 # allele is labled as INF
-                allele_details[4] = (
-                    "INF_"
-                    + allele_name
+
+                allele_details[3] = (
+                    allele_name
                     + "_"
                     + str(
                         self.inf_alle_obj.get_inferred_allele(
-                            column_blast_res[14], allele_name
+                            column_blast_res[13], allele_name
                         )
                     )
                 )
-                return ["INF", allele_name, allele_details]
+                allele_details[4] = "INF_" + allele_details[3]
+                return ["INF", allele_details[3], allele_details]
         else:
             # analyze again the blast result to check with lower query size, 0.75
             # it starts/ends at the contig. Then it is labled as PLOT
@@ -193,9 +194,9 @@ class AlleleCalling:
                         multi_allele.append(allele_details)
                         clasification = "PLOT"
             if clasification == "PLOT":
-                return [clasification, allele_name, multi_allele]
+                return [clasification, allele_details[4], multi_allele]
             else:
-                return ["LNF", "allele_name", "LNF"]
+                return ["LNF", "-", "LNF"]
 
     def search_match_allele(self):
         # Create  blast db with sample file
@@ -205,11 +206,12 @@ class AlleleCalling:
             "allele_match": {},
             "allele_details": {},
             "snp_data": {},
+            "alignment_data": {},
         }
         count = 0
         for ref_allele in self.ref_alleles:
             count += 1
-            print(
+            log.debug(
                 " Processing allele ",
                 ref_allele,
                 " ",
@@ -217,8 +219,7 @@ class AlleleCalling:
                 " of ",
                 len(self.ref_alleles),
             )
-            # schema_alleles = os.path.join(self.schema, ref_allele)
-            # parallel in all CPUs in cluster node
+
             alleles = OrderedDict()
             match_found = False
             with open(ref_allele, "r") as fh:
@@ -228,7 +229,7 @@ class AlleleCalling:
             for r_id, r_seq in alleles.items():
                 count_2 += 1
 
-                print("Running blast for ", count_2, " of ", len(alleles))
+                log.debug("Running blast for ", count_2, " of ", len(alleles))
                 # create file in memory to increase speed
                 query_file = io.StringIO()
                 query_file.write(">" + r_id + "\n" + r_seq)
@@ -265,6 +266,12 @@ class AlleleCalling:
                 result["snp_data"][allele_name] = taranis.utils.get_snp_position(
                     allele_seq, alleles
                 )
+            if self.aligment_request and result["allele_type"][allele_name] == "INF":
+                # run alignment analysis
+                allele_seq = result["allele_details"][allele_name][14]
+                result["alignment_data"][
+                    allele_name
+                ] = taranis.utils.get_alignment_data(allele_seq, alleles)
         return result
 
 
@@ -288,7 +295,10 @@ def parallel_execution(
         snp_request,
         aligment_request,
     )
-    return allele_obj.search_match_allele()
+    sample_name = Path(sample_file).stem
+    stderr.print(f"[green] Analyzing sample {sample_name}")
+    log.info(f"Analyzing sample {sample_name}")
+    return {sample_name: allele_obj.search_match_allele()}
 
 
 def collect_data(
@@ -311,7 +321,7 @@ def collect_data(
             s_list.append(sample)  # create list of samples
             for classif, count in classif_counts.items():
                 classif_data[classif].append(int(count))
-        # create graphics
+        # create graphics per each classification type
         for allele_type, counts in classif_data.items():
             _ = taranis.utils.create_graphic(
                 graphic_folder,
@@ -322,6 +332,7 @@ def collect_data(
                 ["Samples", "number"],
                 str("Number of " + allele_type + " in samples"),
             )
+        return
 
     summary_result_file = os.path.join(output, "allele_calling_summary.csv")
     sample_allele_match_file = os.path.join(output, "allele_calling_match.csv")
@@ -345,8 +356,8 @@ def collect_data(
         "sequence",
     ]
 
-    summary_result = {}
-    sample_allele_match = {}
+    summary_result = {}  # used for summary file and allele classification graphics
+    sample_allele_match = {}  # used for allele match file
 
     # get allele list
     first_sample = list(results[0].keys())[0]
@@ -366,7 +377,6 @@ def collect_data(
                 )
             summary_result[sample] = sum_allele_type
             sample_allele_match[sample] = allele_match
-
     # save summary results to file
     with open(summary_result_file, "w") as fo:
         fo.write("Sample," + ",".join(allele_types) + "\n")
@@ -399,10 +409,8 @@ def collect_data(
         with open(snp_file, "w") as fo:
             fo.write("Sample name,Locus name,Reference allele,Position,Base,Ref\n")
             for sample, values in result.items():
-                # pdb.set_trace()
                 for allele, snp_data in values["snp_data"].items():
                     for ref_allele, snp_info_list in snp_data.items():
-                        # pdb.set_trace()
                         for snp_info in snp_info_list:
                             fo.write(
                                 sample
@@ -414,5 +422,21 @@ def collect_data(
                                 + ",".join(snp_info)
                                 + "\n"
                             )
+    # create alignment files
+    if aligment_request:
+        alignment_folder = os.path.join(output, "alignments")
+        _ = taranis.utils.create_new_folder(alignment_folder)
+        for result in results:
+            for sample, values in result.items():
+                for allele, alignment_data in values["alignment_data"].items():
+                    with open(
+                        os.path.join(alignment_folder, sample + "_" + allele + ".txt"),
+                        "w",
+                    ) as fo:
+                        for ref_allele, alignments in alignment_data.items():
+                            fo.write(ref_allele + "\n")
+                            for alignment in alignments:
+                                fo.write(alignment + "\n")
+
     # Create graphics
     stats_graphics(output, summary_result)
