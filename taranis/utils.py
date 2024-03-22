@@ -4,7 +4,6 @@ import gzip
 import io
 import logging
 import multiprocessing
-import numpy as np
 import os
 import pandas as pd
 import plotly.graph_objects as go
@@ -257,7 +256,7 @@ def file_exists(file_to_check):
     return False
 
 
-""" 
+"""
 def find_nearest_numpy_value(array, value):
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
