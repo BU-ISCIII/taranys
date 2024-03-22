@@ -1,6 +1,3 @@
-import pdb
-
-
 class InferredAllele:
     def __init__(self):
         self.inferred_seq = {}

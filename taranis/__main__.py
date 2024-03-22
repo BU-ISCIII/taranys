@@ -15,7 +15,6 @@ import taranis.reference_alleles
 import taranis.allele_calling
 
 import taranis.inferred_alleles
-from pathlib import Path
 
 log = logging.getLogger()
 
