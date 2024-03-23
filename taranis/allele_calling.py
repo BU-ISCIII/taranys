@@ -391,7 +391,7 @@ def collect_data(
         for sample, allele_cod in sample_allele_match.items():
             fo.write(f"{sample},")
             for allele in allele_list:
-                fo.write(f"{allele_cod[allele]},")
+                fo.write(f"{allele_cod[allele]}")
             fo.write("\n")
 
     with open(sample_allele_detail_file, "w") as fo:
