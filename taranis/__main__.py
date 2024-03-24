@@ -424,13 +424,13 @@ def reference_alleles(
     "--snp/--no-snp",
     required=False,
     default=False,
-    help="Create SNP file for alleles that are infered INF",
+    help="Create SNP file for alleles in assembly in relation with reference allele",
 )
 @click.option(
     "--alignment/--no-alignment",
     required=False,
     default=False,
-    help="Create aligment file for Overwrite the output folder if it exists",
+    help="Create alignment files",
 )
 @click.option(
     "--cpus",
@@ -475,7 +475,7 @@ def allele_calling(
     )
     # Create the instanace for inference alleles
     inf_allele_obj = taranis.inferred_alleles.InferredAllele()
-    """Analyze the sample file against schema to identify outbreakers
+    """Analyze the sample file against schema to identify alleles
     """
 
     start = time.perf_counter()
