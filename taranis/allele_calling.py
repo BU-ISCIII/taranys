@@ -127,7 +127,7 @@ class AlleleCalling:
         for b_result in blast_result:
             column_blast_res = b_result.split("\t")
             query_length = int(column_blast_res[4]) / int(column_blast_res[3])
-            if query_length >= 0.8:
+            if query_length >= self.threshold:
                 valid_blast_result.append(b_result)
                 if query_length == 1:
                     match_full_length += 1
