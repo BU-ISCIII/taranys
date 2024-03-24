@@ -26,15 +26,30 @@ class AlleleCalling:
         schema: str,
         annotation: dict,
         reference_alleles: list,
+        threshold: float,
         out_folder: str,
         inf_alle_obj: object,
         snp_request: bool = False,
         aligment_request: bool = False,
     ):
+        """Allele calling initial creation object
+
+        Args:
+            sample_file (str): assembly file
+            schema (str): folder with alleles schema
+            annotation (dict): annotation of locus according to prokka
+            reference_alleles (list): folder with reference alleles
+            threshold (float): threshold to consider a match in blast
+            out_folder (str): output folder
+            inf_alle_obj (object): object to infer alleles
+            snp_request (bool, optional): snp saved to file. Defaults to False.
+            aligment_request (bool, optional): allignment saved to file. Defaults to False.
+        """
         self.prediction_data = annotation  # store prediction annotation
         self.sample_file = sample_file
         self.schema = schema
         self.ref_alleles = reference_alleles
+        self.threshold = threshold
         self.out_folder = out_folder
         self.s_name = Path(sample_file).stem
         self.blast_dir = os.path.join(out_folder, "blastdb")
@@ -49,7 +64,27 @@ class AlleleCalling:
     def assign_allele_type(
         self, blast_result: list, allele_file: str, allele_name: str
     ) -> list:
+        """Assign allele type to the allele
+
+        Args:
+            blast_result (list): information collected by running blast
+            allele_file (str): file name with allele sequence
+            allele_name (str): allele name
+
+        Returns:
+            list: containing allele classification, allele name and allele details
+        """
+
         def get_blast_details(blast_result: list, allele_name: str) -> list:
+            """Collect blast details and modify the order of the columns
+
+            Args:
+                blast_result (list): information collected by running blast
+                allele_name (str):  allele name
+
+            Returns:
+                list: containing allele details in the correct order to be saved
+            """
             match_allele_name = blast_result[0]
             try:
                 gene_annotation = self.prediction_data[match_allele_name]["gene"]
@@ -72,8 +107,8 @@ class AlleleCalling:
                 allele_name,  # core gene name
                 blast_result[0],  # allele gene
                 "coding",  # coding allele type. To be filled later idx = 4
-                blast_result[3],  # query length
-                blast_result[4],  # match length
+                blast_result[3],  # reference allele length
+                blast_result[4],  # alignment length
                 blast_result[14],  # contig length
                 blast_result[9],  # contig start
                 blast_result[10],  # contig end
@@ -109,13 +144,13 @@ class AlleleCalling:
                 if match_full_length >= 2:
                     # labled as NIPHEM if all alleles are in the same contig
                     allele_details[4] = "NIPHEM_" + allele_details[3]
-                    clasification = "NIPHEM"
+                    classification = "NIPHEM"
                 else:
                     # labled as NIPH if all alleles are in different contigs
                     allele_details[4] = "NIPH_" + allele_details[3]
-                    clasification = "NIPH"
+                    classification = "NIPH"
                 multi_allele.append(allele_details)
-            return [clasification, allele_name, multi_allele]
+            return [classification, allele_name, multi_allele]
 
         elif len(valid_blast_result) == 1:
             column_blast_res = blast_result[0].split("\t")
@@ -133,7 +168,7 @@ class AlleleCalling:
                 allele_details[4] = "EXC_" + allele_details[3]
                 return ["EXC", allele_name, allele_details]
             # check if contig is shorter than allele
-            if int(column_blast_res[3]) > int(column_blast_res[4]):
+            if int(column_blast_res[3]) > int(get_blast_detailscolumn_blast_res[4]):
                 # check if sequence is shorter because it starts or ends at the contig
                 if (
                     column_blast_res[9] == "1"  # check  at contig start
@@ -173,7 +208,7 @@ class AlleleCalling:
             # it starts/ends at the contig. Then it is labled as PLOT
 
             multi_allele = []
-            clasification = ""
+            classification = ""
             for b_result in blast_result:
                 column_blast_res = b_result.split("\t")
                 query_length = int(column_blast_res[4]) / int(column_blast_res[3])
@@ -192,9 +227,9 @@ class AlleleCalling:
                         # allele is labled as PLOT
                         allele_details[4] = "PLOT_" + allele_details[3]
                         multi_allele.append(allele_details)
-                        clasification = "PLOT"
-            if clasification == "PLOT":
-                return [clasification, allele_details[4], multi_allele]
+                        classification = "PLOT"
+            if classification == "PLOT":
+                return [classification, allele_details[4], multi_allele]
             else:
                 return ["LNF", "-", "LNF"]
 
@@ -237,7 +272,7 @@ class AlleleCalling:
                 blast_result = self.blast_obj.run_blast(
                     query_file.read(),
                     perc_identity=90,
-                    num_threads=4,
+                    num_threads=1,
                     query_type="stdin",
                 )
                 if len(blast_result) > 0:
@@ -269,9 +304,9 @@ class AlleleCalling:
             if self.aligment_request and result["allele_type"][allele_name] == "INF":
                 # run alignment analysis
                 allele_seq = result["allele_details"][allele_name][14]
-                result["alignment_data"][allele_name] = (
-                    taranis.utils.get_alignment_data(allele_seq, alleles)
-                )
+                result["alignment_data"][
+                    allele_name
+                ] = taranis.utils.get_alignment_data(allele_seq, alleles)
         return result
 
 
@@ -389,9 +424,9 @@ def collect_data(
     with open(sample_allele_match_file, "w") as fo:
         fo.write("Sample," + ",".join(allele_list) + "\n")
         for sample, allele_cod in sample_allele_match.items():
-            fo.write(f"{sample},")
+            fo.write(f"{sample}")
             for allele in allele_list:
-                fo.write(f"{allele_cod[allele]}")
+                fo.write(f",{allele_cod[allele]}")
             fo.write("\n")
 
     with open(sample_allele_detail_file, "w") as fo:
