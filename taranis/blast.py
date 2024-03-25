@@ -96,7 +96,7 @@ class Blast:
         if query_type == "stdin":
             stdin_query = query
             query = "-"
-        blast_parameters = '"6 , qseqid , sseqid , pident ,  qlen , length , mismatch , gapopen , evalue , bitscore , sstart , send , qstart , qend , sseq , slen"'
+        blast_parameters = '"6 , qseqid , sseqid , pident ,  qlen , length , mismatch , gapopen , evalue , bitscore , sstart , send , qstart , qend , sseq , qseq , slen"'
         cline = NcbiblastnCommandline(
             task="blastn",
             db=self.out_blast_dir,
