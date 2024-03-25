@@ -1,7 +1,11 @@
+import threading
+
+
 class InferredAllele:
     def __init__(self):
         self.inferred_seq = {}
         self.last_allele_index = {}
+        self.lock = threading.Lock()  # Create a lock object
 
     def get_inferred_allele(self, sequence: str, allele: str) -> str:
         """Infer allele from the sequence
@@ -12,9 +16,10 @@ class InferredAllele:
         Returns:
             str: inferred allele
         """
-        if sequence not in self.inferred_seq:
-            return self.set_inferred_allele(sequence, allele)
-        return self.inferred_seq[sequence]
+        with self.lock:  # Acquire the lock
+            if sequence not in self.inferred_seq:
+                return self.set_inferred_allele(sequence, allele)
+            return self.inferred_seq[sequence]
 
     def set_inferred_allele(self, sequence: str, allele: str) -> None:
         """Set the inferred allele for the sequence
