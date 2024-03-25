@@ -400,6 +400,15 @@ def reference_alleles(
     help="Annotation file. ",
 )
 @click.option(
+    "-t",
+    "--threshold",
+    required=False,
+    nargs=1,
+    default=0.8,
+    type=float,
+    help="Threshold value to consider in blast. Values from 0 to 1. default 0.8",
+)
+@click.option(
     "-o",
     "--output",
     required=True,
@@ -445,6 +454,7 @@ def allele_calling(
     reference: str,
     annotation: str,
     assemblies: list,
+    threshold: float,
     output: str,
     force: bool,
     snp: bool,
@@ -480,6 +490,7 @@ def allele_calling(
 
     start = time.perf_counter()
     results = []
+    """
     with concurrent.futures.ThreadPoolExecutor(max_workers=cpus) as executor:
         futures = [
             executor.submit(
@@ -488,6 +499,7 @@ def allele_calling(
                 schema,
                 prediction_data,
                 schema_ref_files,
+                threshold,
                 output,
                 inf_allele_obj,
                 snp,
@@ -501,7 +513,19 @@ def allele_calling(
             except Exception as e:
                 print(e)
                 continue
-
+    """
+    import pdb; pdb.set_trace()
+    results = taranis.allele_calling.parallel_execution(
+                assemblies[0],
+                schema,
+                prediction_data,
+                schema_ref_files,
+                threshold,
+                output,
+                inf_allele_obj,
+                snp,
+                alignment,
+    )
     _ = taranis.allele_calling.collect_data(results, output, snp, alignment)
     finish = time.perf_counter()
     print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
