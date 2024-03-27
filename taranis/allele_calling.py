@@ -28,6 +28,7 @@ class AlleleCalling:
         annotation: dict,
         reference_alleles: list,
         threshold: float,
+        perc_identity: int,
         out_folder: str,
         inf_alle_obj: object,
         snp_request: bool = False,
@@ -51,6 +52,7 @@ class AlleleCalling:
         self.schema = schema
         self.ref_alleles = reference_alleles
         self.threshold = threshold
+        self.perc_identity = perc_identity
         self.out_folder = out_folder
         self.s_name = Path(sample_file).stem
         self.blast_dir = os.path.join(out_folder, "blastdb")
@@ -302,7 +304,7 @@ class AlleleCalling:
                 query_file.seek(0)
                 blast_result = self.blast_obj.run_blast(
                     query_file.read(),
-                    perc_identity=90,
+                    perc_identity=self.perc_identity,
                     num_threads=1,
                     query_type="stdin",
                 )
@@ -313,7 +315,6 @@ class AlleleCalling:
             query_file.close()
             if match_found:
                 allele_file = os.path.join(self.schema, os.path.basename(ref_allele))
-                # blast_result = self.blast_obj.run_blast(q_file,perc_identity=100)
                 allele_name = Path(allele_file).stem
                 (
                     result["allele_type"][allele_name],
@@ -347,6 +348,7 @@ def parallel_execution(
     prediction_data: dict,
     reference_alleles: list,
     threshold: float,
+    perc_identity: int,
     out_folder: str,
     inf_alle_obj: object,
     snp_request: bool = False,
@@ -358,6 +360,7 @@ def parallel_execution(
         prediction_data,
         reference_alleles,
         threshold,
+        perc_identity,
         out_folder,
         inf_alle_obj,
         snp_request,
