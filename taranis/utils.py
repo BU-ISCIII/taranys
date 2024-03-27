@@ -21,6 +21,7 @@ import sys
 
 from pathlib import Path
 from Bio import SeqIO
+from Bio.Seq import Seq
 
 log = logging.getLogger(__name__)
 
@@ -322,24 +323,55 @@ def get_files_in_folder(folder: str, extension: str = None) -> list[str]:
     return glob.glob(folder_files)
 
 
-def get_snp_position(allele_sequence: str, ref_sequences: dict[str]) -> dict[list[str]]:
-    """Get the snp position between the allele sequence and the reference alleles
+def get_snp_information(
+    ref_sequence: str, alt_sequence: str, ref_allele_name
+) -> dict[list[str]]:
+    """Get the snp information between the reference allele sequence and the
+        allele sequence in sample.
+        It collects; position of snp, nucleotide changed reference/alternative,
+        triplet code (belongs the change), amino acid change and category of
+        amino acid
 
     Args:
-        allele_sequence (str): sequence to be compared
         ref_sequences (dict): sequences of reference alleles
+        allele_sequence (str): sequence to be compared
 
     Returns:
-        dict: key: ref_sequence, value: list of snp position
+        dict: key: ref_sequence, value: list of snp information
     """
-    snp_data = {}
-    for ref_allele, ref_sequence in ref_sequences.items():
-        snp_position = []
-        for idx, (a, b) in enumerate(zip(allele_sequence, ref_sequence)):
-            if a != b:
-                snp_position.append([str(idx), a, b])
-        snp_data[ref_allele] = snp_position
-    return snp_data
+    snp_info = {}
+    ref_protein = str(Seq(ref_sequence).translate())
+    alt_protein = str(Seq(alt_sequence).translate())
+
+    snp_line = []
+    for idx, (ref, alt) in enumerate(zip(ref_sequence, alt_sequence)):
+        if alt != ref:
+            # calculate the triplet index
+            triplet_idx = idx // 3
+            # get triplet code
+            ref_triplet = ref_sequence[triplet_idx * 3 : triplet_idx * 3 + 3]
+            alt_triplet = alt_sequence[triplet_idx * 3 : triplet_idx * 3 + 3]
+            # get amino acid change
+            ref_aa = ref_protein[triplet_idx]
+            alt_aa = alt_protein[triplet_idx]
+            # get amino acid category
+            ref_category = map_amino_acid_to_annotation(ref_sequence[triplet_idx])
+            alt_category = map_amino_acid_to_annotation(alt_sequence[triplet_idx])
+            snp_line.append(
+                [
+                    str(idx),
+                    ref,
+                    alt,
+                    ref_triplet,
+                    alt_triplet,
+                    ref_aa,
+                    alt_aa,
+                    ref_category,
+                    alt_category,
+                ]
+            )
+    snp_info[ref_allele_name] = snp_line
+    return snp_info
 
 
 def grep_execution(input_file: str, pattern: str, parameters: str) -> list[str]:
@@ -364,6 +396,35 @@ def grep_execution(input_file: str, pattern: str, parameters: str) -> list[str]:
         log.debug("Unable to run grep. Error message: %s ", e)
         return []
     return result.stdout.split("\n")
+
+
+def map_amino_acid_to_annotation(amino_acid):
+    # Dictionary mapping amino acids to their categories
+    amino_acid_categories = {
+        "A": "Nonpolar",
+        "C": "Polar",
+        "D": "Acidic",
+        "E": "Acidic",
+        "F": "Nonpolar",
+        "G": "Nonpolar",
+        "H": "Basic",
+        "I": "Nonpolar",
+        "K": "Basic",
+        "L": "Nonpolar",
+        "M": "Nonpolar",
+        "N": "Polar",
+        "P": "Nonpolar",
+        "Q": "Polar",
+        "R": "Basic",
+        "S": "Polar",
+        "T": "Polar",
+        "V": "Nonpolar",
+        "W": "Nonpolar",
+        "Y": "Polar",
+    }
+
+    # Return the category of the given amino acid
+    return amino_acid_categories.get(amino_acid, "Unknown")
 
 
 def prompt_text(msg):
