@@ -336,9 +336,9 @@ class AlleleCalling:
             if self.aligment_request and result["allele_type"][allele_name] != "LNF":
                 # run alignment analysis
                 allele_seq = result["allele_details"][allele_name][14]
-                result["alignment_data"][
-                    allele_name
-                ] = taranis.utils.get_alignment_data(allele_seq, alleles)
+                result["alignment_data"][allele_name] = (
+                    taranis.utils.get_alignment_data(allele_seq, alleles)
+                )
         return result
 
 
