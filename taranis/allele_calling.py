@@ -9,7 +9,6 @@ import taranis.blast
 from collections import OrderedDict
 from pathlib import Path
 from Bio import SeqIO
-import pdb
 
 log = logging.getLogger(__name__)
 stderr = rich.console.Console(
@@ -113,7 +112,6 @@ class AlleleCalling:
                 blast_split = b_result.split("\t")
                 # check if the division of the match contig length by the
                 # reference allele length is higher than the threshold
-                # pdb.set_trace()
                 if (int(blast_split[4]) / int(blast_split[3])) >= self.threshold:
                     valid_blast_result.append(b_result)
             return valid_blast_result
@@ -156,11 +154,13 @@ class AlleleCalling:
                 gene_annotation = "Not found"
                 product_annotation = "Not found"
                 allele_quality = "Not found"
-            # pdb.set_trace()
             if int(split_blast_result[10]) > int(split_blast_result[9]):
                 direction = "+"
             else:
                 direction = "-"
+            # remove the gaps in sequences
+            match_sequence = split_blast_result[13].replace("-", "")
+            reference_sequence = split_blast_result[14].replace("-", "")
             # get blast details
             blast_details = [
                 self.s_name,  # sample name
@@ -177,10 +177,9 @@ class AlleleCalling:
                 gene_annotation,
                 product_annotation,
                 allele_quality,
-                split_blast_result[13],  # match sequence in contig
-                split_blast_result[15],  # reference allele sequence
+                match_sequence,  # match sequence in contig
+                reference_sequence,  # reference allele sequence
             ]
-            # pdb.set_trace()
             return blast_details
 
         def find_match_allele_schema(allele_file: str, match_sequence: str) -> str:
@@ -258,7 +257,6 @@ class AlleleCalling:
                 match_allele_schema = str(
                     self.inf_alle_obj.get_inferred_allele(b_split_data[14], allele_name)
                 )
-        # pdb.set_trace()
         b_split_data[4] = classification + "_" + match_allele_schema
         return [
             classification,
@@ -327,13 +325,15 @@ class AlleleCalling:
                 result["allele_type"][allele_name] = "LNF"
                 result["allele_match"][allele_name] = allele_name
                 result["allele_details"][allele_name] = "LNF"
-            if self.snp_request and result["allele_type"][allele_name] == "INF":
+            if self.snp_request and result["allele_type"][allele_name] != "LNF":
                 # run snp analysis
+                ref_allele_seq = result["allele_details"][allele_name][15]
                 allele_seq = result["allele_details"][allele_name][14]
-                result["snp_data"][allele_name] = taranis.utils.get_snp_position(
-                    allele_seq, alleles
+                ref_allele_name = result["allele_details"][allele_name][3]
+                result["snp_data"][allele_name] = taranis.utils.get_snp_information(
+                    ref_allele_seq, allele_seq, ref_allele_name
                 )
-            if self.aligment_request and result["allele_type"][allele_name] == "INF":
+            if self.aligment_request and result["allele_type"][allele_name] != "LNF":
                 # run alignment analysis
                 allele_seq = result["allele_details"][allele_name][14]
                 result["alignment_data"][
@@ -431,7 +431,6 @@ def collect_data(
     sample_allele_match = {}  # used for allele match file
 
     # get allele list
-    # pdb.set_trace()
     first_sample = list(results[0].keys())[0]
     allele_list = sorted(results[0][first_sample]["allele_type"].keys())
     for result in results:
@@ -480,7 +479,9 @@ def collect_data(
     if snp_request:
         snp_file = os.path.join(output, "snp_data.csv")
         with open(snp_file, "w") as fo:
-            fo.write("Sample name,Locus name,Reference allele,Position,Base,Ref\n")
+            fo.write(
+                "Sample name,Locus name,Reference allele,Position,Ref,Alt,Codon Ref,Codon Alt,Amino Ref,Amino Alt,Category Ref,Category Alt\n"
+            )
             for sample, values in result.items():
                 for allele, snp_data in values["snp_data"].items():
                     for ref_allele, snp_info_list in snp_data.items():
