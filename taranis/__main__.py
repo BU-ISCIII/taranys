@@ -409,6 +409,15 @@ def reference_alleles(
     help="Threshold value to consider in blast. Values from 0 to 1. default 0.8",
 )
 @click.option(
+    "-p",
+    "--perc-identity",
+    required=False,
+    nargs=1,
+    default=90,
+    type=int,
+    help="Percentage of identity to consider in blast. default 90",
+)
+@click.option(
     "-o",
     "--output",
     required=True,
@@ -455,6 +464,7 @@ def allele_calling(
     annotation: str,
     assemblies: list,
     threshold: float,
+    perc_identity: int,
     output: str,
     force: bool,
     snp: bool,
@@ -500,6 +510,7 @@ def allele_calling(
                 prediction_data,
                 schema_ref_files,
                 threshold,
+                perc_identity,
                 output,
                 inf_allele_obj,
                 snp,
@@ -514,17 +525,19 @@ def allele_calling(
                 print(e)
                 continue
     """
-    import pdb; pdb.set_trace()
-    results = taranis.allele_calling.parallel_execution(
-                assemblies[0],
-                schema,
-                prediction_data,
-                schema_ref_files,
-                threshold,
-                output,
-                inf_allele_obj,
-                snp,
-                alignment,
+    results.append(
+        taranis.allele_calling.parallel_execution(
+            assemblies[0],
+            schema,
+            prediction_data,
+            schema_ref_files,
+            threshold,
+            perc_identity,
+            output,
+            inf_allele_obj,
+            snp,
+            alignment,
+        )
     )
     _ = taranis.allele_calling.collect_data(results, output, snp, alignment)
     finish = time.perf_counter()
