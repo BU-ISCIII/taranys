@@ -18,7 +18,7 @@ stderr = rich.console.Console(
 
 class DistanceMatrix:
     def __init__(
-        self, file_path: str, k_mer_value: str = "21", sketch_size: str = "2000"
+        self, file_path: str, k_mer_value: str = "17", sketch_size: str = "2000"
     ) -> "DistanceMatrix":
         """DistanceMatrix instance creation
 
@@ -77,7 +77,7 @@ class DistanceMatrix:
         dist_matrix.write("\n".join(out_data[1:]))
         dist_matrix.seek(0)
         matrix_pd = pd.read_csv(
-            dist_matrix, sep="\t", index_col="alleles", engine="python"
+            dist_matrix, sep="\t", index_col="alleles", engine="python", dtype=float
         ).fillna(0)
         # Close object and discard memory buffer
         dist_matrix.close()
