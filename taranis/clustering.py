@@ -4,6 +4,7 @@ import logging
 import numpy as np
 import rich.console
 import taranis.utils
+import taranis.seq_cluster
 
 log = logging.getLogger(__name__)
 stderr = rich.console.Console(
@@ -19,7 +20,7 @@ class ClusterDistance:
         self,
         dist_matrix: np.array,
         ref_seq_name: str,
-        resolution: float = 0.92,
+        resolution: float = 0.75,
         seed: int = None,
     ):
         """ClusterDistance instance creation
@@ -81,7 +82,7 @@ class ClusterDistance:
     def convert_to_seq_clusters(
         self, cluster_ids: np.array, id_to_seq_name: dict
     ) -> dict:
-        """convert the index into the alleale names
+        """convert the index into the allele names
 
         Args:
             cluster_ids (np.array): index of matrix belongs to cluster
