@@ -65,7 +65,7 @@ class ReferenceAlleles:
         )
         mash_distance_df = distance_obj.create_matrix()
         log.debug(f"Created distance matrix for {self.fasta_file}")
-        postition_to_allele = {
+        position_to_allele = {
             x: mash_distance_df.columns[x] for x in range(len(mash_distance_df.columns))
         }
         # convert the  triangle matrix into full data matrix
@@ -75,7 +75,7 @@ class ReferenceAlleles:
         # At this point minimal distance is 0. For clustering requires to be 1
         # the oposite.
         dist_matrix_np = (matrix_np - 1) * -1
-        return dist_matrix_np, postition_to_allele
+        return dist_matrix_np, position_to_allele
 
     def processing_cluster_data(
         self, cluster_data: np.array, cluster_ptrs: np.array, position_to_allele: dict
