@@ -6,30 +6,23 @@ https://github.com/phglab/ALFATClust/blob/main/main/modules/SeqCluster.py
 """
 
 from itertools import combinations, combinations_with_replacement
-from scipy.sparse import coo_matrix
+
 import igraph as ig
 import leidenalg
 import numpy as np
+from scipy.sparse import coo_matrix
 
 
 class SeqCluster:
-    _res_param_start = None
-    _res_param_end = None
-    _res_param_step_size = None
-    _precision = None
-    _seed = None
-    _is_verbose = None
-    _init = False
 
     @classmethod
-    def init(cls, user_params, is_verbose=True):
-        cls._res_param_start = user_params.res_param_start
-        cls._res_param_end = user_params.res_param_end
-        cls._res_param_step_size = user_params.res_param_step_size
-        cls._precision = user_params.precision
-        cls._seed = user_params.seed
+    def __init__(cls, res_start, seed, is_verbose=True):
+        cls._res_param_start = res_start
+        cls._res_param_end = 0.99
+        cls._res_param_step_size = 0.025
+        cls._precision = 3
+        cls._seed = seed
         cls._is_verbose = is_verbose
-        cls._init = True
 
     @classmethod
     def disable_verbose(cls):
@@ -39,7 +32,7 @@ class SeqCluster:
     def _convert_to_index_pos(mtrx_idxs):
         idx_type = mtrx_idxs.dtype
 
-        if idx_type == np.bool:
+        if idx_type == bool:
             return np.argwhere(mtrx_idxs).flatten()
         elif idx_type == np.int:
             return mtrx_idxs
@@ -364,7 +357,6 @@ class SeqCluster:
         global_edge_weight_mtrx[global_edge_weight_mtrx == 0] = (
             -1 * global_edge_weight_mtrx.size
         )
-        np.fill_diagonal(global_edge_weight_mtrx, 1)
 
         comm_graph = ig.Graph.Weighted_Adjacency(
             global_edge_weight_mtrx.tolist(), mode=1, loops=False
