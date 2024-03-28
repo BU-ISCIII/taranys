@@ -298,7 +298,7 @@ def analyze_schema(
     "--cluster-resolution",
     required=False,
     type=float,
-    default=0.92,
+    default=0.75,
     help="Resolution value used for clustering.",
 )
 @click.option(
