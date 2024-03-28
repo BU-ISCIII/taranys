@@ -27,7 +27,7 @@ class ReferenceAlleles:
         eval_cluster: bool,
         kmer_size: int,
         sketch_size: int,
-        cluster_resolution: float = 0.92,
+        cluster_resolution: float = 0.75,
         seed: int = None,
     ):
         """ReferenceAlleles instance creation
