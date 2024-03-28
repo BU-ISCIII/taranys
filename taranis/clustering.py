@@ -144,18 +144,7 @@ class ClusterDistance:
             matrix indexes adn second the statistics data for each cluster
         """
         self.resolution = resolution
-        comm_graph = ig.Graph.Weighted_Adjacency(
-            self.dist_matrix.tolist(), mode=1, loops=False
-        )
-        graph_clusters = leidenalg.find_partition(
-            comm_graph,
-            leidenalg.CPMVertexPartition,
-            weights="weight",
-            n_iterations=-1,
-            resolution_parameter=self.resolution,
-            seed=self.seed,
-        )
-        cluster_ptrs = np.array(graph_clusters.membership)
-
+        seq_cluster_obj = taranis.seq_cluster.SeqCluster(self.resolution, self.seed)
+        cluster_ptrs = seq_cluster_obj.cluster_seqs(self.dist_matrix)
         clusters_data = self.collect_data_cluster(cluster_ptrs)
         return [cluster_ptrs, clusters_data]
