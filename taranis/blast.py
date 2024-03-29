@@ -65,14 +65,14 @@ class Blast:
     def run_blast(
         self,
         query: str,
-        evalue: float = 0.001,
+        evalue: float = 10,
         perc_identity: int = 90,
         reward: int = 1,
         penalty: int = -2,
         gapopen: int = 1,
         gapextend: int = 1,
-        max_target_seqs: int = 2000,
-        max_hsps: int = 10,
+        max_target_seqs: int = 10000,
+        max_hsps: int = 1,
         num_threads: int = 1,
         query_type: str = "file",
     ) -> list:
