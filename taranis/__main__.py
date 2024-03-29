@@ -539,7 +539,9 @@ def allele_calling(
             alignment,
         )
     )
-    _ = taranis.allele_calling.collect_data(results, output, snp, alignment)
+    _ = taranis.allele_calling.collect_data(
+        results, output, snp, alignment, schema_ref_files
+    )
     finish = time.perf_counter()
     print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
     # sample_allele_obj.analyze_sample()

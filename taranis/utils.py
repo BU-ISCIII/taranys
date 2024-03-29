@@ -23,6 +23,7 @@ from pathlib import Path
 from Bio import SeqIO
 from Bio.Seq import Seq
 
+
 log = logging.getLogger(__name__)
 
 
@@ -280,8 +281,10 @@ def folder_exists(folder_to_check):
     return False
 
 
-def get_alignment_data(allele_sequence: str, ref_sequences: dict[str]) -> dict:
-    """Get the alignment data between the allele sequence and the reference alleles
+def get_alignment_data(ref_sequence: str, allele_sequence: str, ref_allele) -> dict:
+    """Get the alignment data between the reference allele and the match allele
+        sequence. It returns 3 lines, the reference allele, the alignment character
+        and the match allele sequence
 
     Args:
         allele_sequence (str): sequence to be compared
@@ -291,14 +294,13 @@ def get_alignment_data(allele_sequence: str, ref_sequences: dict[str]) -> dict:
         dict: key: ref_sequence, value: alignment data
     """
     alignment_data = {}
-    for ref_allele, ref_sequence in ref_sequences.items():
-        alignment = ""
-        for idx, (a, b) in enumerate(zip(allele_sequence, ref_sequence)):
-            if a == b:
-                alignment += "|"
-            else:
-                alignment += " "
-        alignment_data[ref_allele] = [ref_sequence, alignment, allele_sequence]
+    alignment = ""
+    for _, (ref, alt) in enumerate(zip(ref_sequence, allele_sequence)):
+        if ref == alt:
+            alignment += "|"
+        else:
+            alignment += " "
+    alignment_data[ref_allele] = [ref_sequence, alignment, allele_sequence]
     return alignment_data
 
 
@@ -321,6 +323,39 @@ def get_files_in_folder(folder: str, extension: str = None) -> list[str]:
         extension = "*"
     folder_files = os.path.join(folder, "*." + extension)
     return glob.glob(folder_files)
+
+
+def get_multiple_alignment(input_buffer: io.StringIO) -> list[str]:
+    """Run MAFFT with input from the string buffer and capture output to another string buffer
+
+    Args:
+        input_buffer (io.StringIO): fasta sequences to be aligned
+
+    Returns:
+        list[str]: list of aligned sequences
+    """
+    #
+    output_buffer = io.StringIO()
+    # Run MAFFT
+    mafft_command = "mafft --auto --quiet -"  # "-" tells MAFFT to read from stdin
+    process = subprocess.Popen(
+        mafft_command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE
+    )
+    stdout, _ = process.communicate(input_buffer.getvalue().encode())
+
+    # Convert the stdout bytes to a string buffer
+    output_buffer = io.StringIO(stdout.decode())
+    output_buffer.seek(0)
+    # convert the string buffer to a list of lines
+    multi_result = []
+    for line in output_buffer:
+        multi_result.append(line)
+
+    # Close the file objects and process
+    output_buffer.close()
+    process.close()
+
+    return multi_result
 
 
 def get_snp_information(

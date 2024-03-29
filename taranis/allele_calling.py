@@ -9,6 +9,9 @@ import taranis.blast
 from collections import OrderedDict
 from pathlib import Path
 from Bio import SeqIO
+from io import StringIO
+
+import pdb
 
 log = logging.getLogger(__name__)
 stderr = rich.console.Console(
@@ -325,19 +328,23 @@ class AlleleCalling:
                 result["allele_type"][allele_name] = "LNF"
                 result["allele_match"][allele_name] = allele_name
                 result["allele_details"][allele_name] = "LNF"
+
+            # prepare the data for snp and alignment analysis
+            ref_allele_seq = result["allele_details"][allele_name][15]
+            allele_seq = result["allele_details"][allele_name][14]
+            ref_allele_name = result["allele_details"][allele_name][3]
+
             if self.snp_request and result["allele_type"][allele_name] != "LNF":
                 # run snp analysis
-                ref_allele_seq = result["allele_details"][allele_name][15]
-                allele_seq = result["allele_details"][allele_name][14]
-                ref_allele_name = result["allele_details"][allele_name][3]
                 result["snp_data"][allele_name] = taranis.utils.get_snp_information(
                     ref_allele_seq, allele_seq, ref_allele_name
                 )
             if self.aligment_request and result["allele_type"][allele_name] != "LNF":
                 # run alignment analysis
-                allele_seq = result["allele_details"][allele_name][14]
-                result["alignment_data"][allele_name] = (
-                    taranis.utils.get_alignment_data(allele_seq, alleles)
+                result["alignment_data"][
+                    allele_name
+                ] = taranis.utils.get_alignment_data(
+                    ref_allele_seq, allele_seq, ref_allele_name
                 )
         return result
 
@@ -373,7 +380,11 @@ def parallel_execution(
 
 
 def collect_data(
-    results: list, output: str, snp_request: bool, aligment_request: bool
+    results: list,
+    output: str,
+    snp_request: bool,
+    aligment_request: bool,
+    ref_alleles: list,
 ) -> None:
     def stats_graphics(stats_folder: str, summary_result: dict) -> None:
         stderr.print("Creating graphics")
@@ -404,6 +415,17 @@ def collect_data(
                 str("Number of " + allele_type + " in samples"),
             )
         return
+
+    def read_reference_alleles(ref_alleles: list) -> dict[dict]:
+        # read reference alleles
+        ref_alleles_data = {}
+        for ref_allele in ref_alleles:
+            alleles = {}
+            with open(ref_allele, "r") as fh:
+                for record in SeqIO.parse(fh, "fasta"):
+                    alleles[record.id] = str(record.seq)
+            ref_alleles_data[Path(ref_allele).stem] = alleles
+        return ref_alleles_data
 
     summary_result_file = os.path.join(output, "allele_calling_summary.csv")
     sample_allele_match_file = os.path.join(output, "allele_calling_match.csv")
@@ -449,6 +471,7 @@ def collect_data(
                 )
             summary_result[sample] = sum_allele_type
             sample_allele_match[sample] = allele_match
+
     # save summary results to file
     with open(summary_result_file, "w") as fo:
         fo.write("Sample," + ",".join(allele_types) + "\n")
@@ -476,6 +499,7 @@ def collect_data(
                             fo.write(",".join(detail) + "\n")
                     else:
                         fo.write(",".join(detail_value) + "\n")
+    # save snp to file if requested
     if snp_request:
         snp_file = os.path.join(output, "snp_data.csv")
         with open(snp_file, "w") as fo:
@@ -511,6 +535,47 @@ def collect_data(
                             fo.write(ref_allele + "\n")
                             for alignment in alignments:
                                 fo.write(alignment + "\n")
+
+        # create multiple alignment files
+        stderr.print("Processing multiple alignment information")
+        log.info("Processing multiple alignment information")
+        ref_alleles_seq = read_reference_alleles(ref_alleles)
+        for a_list in allele_list:
+            allele_multiple_align = []
+            for ref_id, ref_seq in ref_alleles_seq[a_list].items():
+                input_buffer = StringIO()
+                # get the reference allele sequence
+                input_buffer.write(">" + ref_id + "\n")
+                input_buffer.write(str(ref_seq) + "\n")
+                # get the sequences for sample on the same allele
+                for result in results:
+                    for sample, values in result.items():
+                        # add sample and allele name
+                        # pdb.set_trace()
+                        # discard the allele if it is LNF
+                        if values["allele_type"][a_list] == "LNF":
+                            continue
+                        # get the allele in sample that match
+                        input_buffer.write(
+                            ">"
+                            + sample
+                            + "_"
+                            + a_list
+                            + "_"
+                            + values["allele_details"][a_list][4]
+                            + "\n"
+                        )
+                        # get the sequence of the allele in sample
+                        input_buffer.write(values["allele_details"][a_list][14] + "\n")
+                    input_buffer.seek(0)
+                    # pdb.set_trace()
+
+                allele_multiple_align.append(
+                    taranis.utils.get_multiple_alignment(input_buffer)
+                )
+                input_buffer.close()
+                pdb.set_trace()
+            # save multiple alignment to file
 
     # Create graphics
     stats_graphics(output, summary_result)
