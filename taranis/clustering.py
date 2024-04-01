@@ -22,6 +22,7 @@ class ClusterDistance:
         ref_seq_name: str,
         resolution: float = 0.75,
         seed: int = None,
+        dist_value: float = 0.9,
     ):
         """ClusterDistance instance creation
 
@@ -36,9 +37,10 @@ class ClusterDistance:
         self.ref_seq_name = ref_seq_name
         self.seed = seed
         self.resolution = resolution
+        self.dist_value = dist_value
 
     def calculate_cluster_center(
-        self, cluster_mtrx_idxs: tuple, cluster_mean: float
+        self, cluster_mtrx_idxs: tuple, dist_value: float
     ) -> int:
         """Get the center allele for the cluster by selecting the allele closest
             value to cluster mean
@@ -52,7 +54,7 @@ class ClusterDistance:
             int: index of the allele which is the center of cluster
         """
         cluster_matrix = self.dist_matrix[cluster_mtrx_idxs]
-        col_sums = np.sum(cluster_matrix > 0.9, axis=0)
+        col_sums = np.sum(cluster_matrix > dist_value, axis=0)
         return cluster_mtrx_idxs[0][np.argmax(col_sums)][0]
 
     def calculate_mean_cluster(
@@ -125,7 +127,7 @@ class ClusterDistance:
             # get the closest distance coordenates to cluster mean value
             cluster_data[cluster_id]["avg"] = cluster_mean
             cluster_data[cluster_id]["center_id"] = self.calculate_cluster_center(
-                cluster_mtrx_idxs, cluster_mean
+                cluster_mtrx_idxs, self.dist_value
             )
             log.debug(f"Get the cluster center for {cluster_id}")
             # get the number of sequences for the cluster
