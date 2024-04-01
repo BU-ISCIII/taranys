@@ -173,9 +173,9 @@ class EvaluateCluster:
                         "alleles_not_found"
                     ]
                 if len(result_eval["alleles_not_in_cluster"]) > 0:
-                    evaluation_alleles[cluster_id]["alleles_not_in_cluster"] = (
-                        result_eval["alleles_not_in_cluster"]
-                    )
+                    evaluation_alleles[cluster_id][
+                        "alleles_not_in_cluster"
+                    ] = result_eval["alleles_not_in_cluster"]
             else:
                 evaluation_alleles[cluster_id]["result"] = "OK"
         return self.summary(evaluation_alleles)
