@@ -1,10 +1,10 @@
-import igraph as ig
-import leidenalg
 import logging
+
 import numpy as np
 import rich.console
-import taranis.utils
+
 import taranis.seq_cluster
+import taranis.utils
 
 log = logging.getLogger(__name__)
 stderr = rich.console.Console(
@@ -52,8 +52,8 @@ class ClusterDistance:
             int: index of the allele which is the center of cluster
         """
         cluster_matrix = self.dist_matrix[cluster_mtrx_idxs]
-        row_means = np.mean(cluster_matrix, axis=1)
-        return cluster_mtrx_idxs[0][np.argmin(np.abs(row_means - cluster_mean))][0]
+        col_sums = np.sum(cluster_matrix > 0.9, axis=0)
+        return cluster_mtrx_idxs[0][np.argmax(col_sums)][0]
 
     def calculate_mean_cluster(
         self, cluster_mtrx_idxs: tuple, row_idx_pos: np.ndarray
@@ -121,7 +121,6 @@ class ClusterDistance:
             cluster_bool_ptrs = src_cluster_ptrs == cluster_id
             cluster_mtrx_idxs = np.ix_(cluster_bool_ptrs, cluster_bool_ptrs)
             row_idx_pos = np.argwhere(cluster_bool_ptrs).flatten()
-            # col_idx_pos = np.argwhere(cluster_bool_ptrs).flatten()
             cluster_mean = self.calculate_mean_cluster(cluster_mtrx_idxs, row_idx_pos)
             # get the closest distance coordenates to cluster mean value
             cluster_data[cluster_id]["avg"] = cluster_mean
