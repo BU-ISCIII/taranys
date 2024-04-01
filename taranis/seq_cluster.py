@@ -1,8 +1,8 @@
-""" 
+"""
 Code extracted from ALPHAClust on 03/28/2024.
-Chiu, J.K.H., Ong, R.TH. Clustering biological sequences with dynamic sequence similarity threshold. 
+Chiu, J.K.H., Ong, R.TH. Clustering biological sequences with dynamic sequence similarity threshold.
 BMC Bioinformatics 23, 108 (2022). https://doi.org/10.1186/s12859-022-04643-9
-https://github.com/phglab/ALFATClust/blob/main/main/modules/SeqCluster.py 
+https://github.com/phglab/ALFATClust/blob/main/main/modules/SeqCluster.py
 """
 
 from itertools import combinations, combinations_with_replacement
