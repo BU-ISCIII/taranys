@@ -136,7 +136,7 @@ class ReferenceAlleles:
             optionally a list of evaluation cluster results
         """
         self.records = taranis.utils.read_fasta_file(self.fasta_file)
-        dist_matrix_np, postition_to_allele = self.create_distance_matrix()
+        dist_matrix_np, position_to_allele = self.create_distance_matrix()
         self.cluster_obj = taranis.clustering.ClusterDistance(
             dist_matrix_np,
             self.locus_name,
@@ -148,7 +148,7 @@ class ReferenceAlleles:
             )
 
             allele_data = self.processing_cluster_data(
-                cluster_data, cluster_ptrs, postition_to_allele
+                cluster_data, cluster_ptrs, position_to_allele
             )
             ref_fasta_file = self.save_reference_alleles(
                 allele_data["reference_alleles"]
