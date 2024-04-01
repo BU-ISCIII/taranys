@@ -138,9 +138,9 @@ class SeqCluster:
 
         for cluster_id in range(np.max(src_cluster_ptrs) + 1):
             src_cluster_ids = np.argwhere(src_cluster_ptrs == cluster_id).flatten()
-            output_seq_cluster_ptrs[
-                np.isin(last_seq_cluster_ptrs, src_cluster_ids)
-            ] = cluster_id
+            output_seq_cluster_ptrs[np.isin(last_seq_cluster_ptrs, src_cluster_ids)] = (
+                cluster_id
+            )
 
         return output_seq_cluster_ptrs
 
@@ -239,9 +239,9 @@ class SeqCluster:
         ):
             if len(src_cluster_bins) == 0:
                 src_cluster_bins.append([src_cluster_id])
-                avg_intra_bin_edge_weights[
-                    str(src_cluster_id)
-                ] = global_edge_weight_mtrx[src_cluster_id, src_cluster_id]
+                avg_intra_bin_edge_weights[str(src_cluster_id)] = (
+                    global_edge_weight_mtrx[src_cluster_id, src_cluster_id]
+                )
                 continue
 
             best_bin = None
@@ -267,16 +267,16 @@ class SeqCluster:
 
             if best_bin is None:
                 src_cluster_bins.append([src_cluster_id])
-                avg_intra_bin_edge_weights[
-                    str(src_cluster_id)
-                ] = global_edge_weight_mtrx[src_cluster_id, src_cluster_id]
+                avg_intra_bin_edge_weights[str(src_cluster_id)] = (
+                    global_edge_weight_mtrx[src_cluster_id, src_cluster_id]
+                )
             else:
                 del avg_intra_bin_edge_weights["-".join(map(str, best_bin))]
                 best_bin.append(src_cluster_id)
-                avg_intra_bin_edge_weights[
-                    "-".join(map(str, best_bin))
-                ] = cls._cal_cluster_avg_edge_weight(
-                    global_edge_weight_mtrx, src_cluster_edge_counts, best_bin
+                avg_intra_bin_edge_weights["-".join(map(str, best_bin))] = (
+                    cls._cal_cluster_avg_edge_weight(
+                        global_edge_weight_mtrx, src_cluster_edge_counts, best_bin
+                    )
                 )
 
         return list(map(np.array, src_cluster_bins)), avg_intra_bin_edge_weights
@@ -297,12 +297,12 @@ class SeqCluster:
 
             for cluster_id in range(np.max(src_cluster_ptrs) + 1):
                 src_cluster_bool_ptrs = src_cluster_ptrs == cluster_id
-                avg_intra_super_cluster_edge_weights[
-                    cluster_id
-                ] = cls._cal_cluster_avg_edge_weight(
-                    global_edge_weight_mtrx,
-                    src_cluster_edge_counts,
-                    src_cluster_bool_ptrs,
+                avg_intra_super_cluster_edge_weights[cluster_id] = (
+                    cls._cal_cluster_avg_edge_weight(
+                        global_edge_weight_mtrx,
+                        src_cluster_edge_counts,
+                        src_cluster_bool_ptrs,
+                    )
                 )
         else:
             src_cluster_ptrs = np.full(candidate_src_cluster_ptrs.size, -1)
@@ -315,9 +315,9 @@ class SeqCluster:
                 if src_cluster_ids.size == 1:
                     assigned_super_cluster_id = np.max(src_cluster_ptrs) + 1
                     src_cluster_ptrs[src_cluster_ids] = assigned_super_cluster_id
-                    avg_intra_super_cluster_edge_weights[
-                        assigned_super_cluster_id
-                    ] = global_edge_weight_mtrx[src_cluster_ids[0], src_cluster_ids[0]]
+                    avg_intra_super_cluster_edge_weights[assigned_super_cluster_id] = (
+                        global_edge_weight_mtrx[src_cluster_ids[0], src_cluster_ids[0]]
+                    )
                     continue
 
                 (
