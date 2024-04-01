@@ -77,7 +77,7 @@ class DistanceMatrix:
         dist_matrix.write("\n".join(out_data[1:]))
         dist_matrix.seek(0)
         matrix_pd = pd.read_csv(
-            dist_matrix, sep="\t", index_col="alleles", engine="python", dtype=float
+            dist_matrix, sep="\t", index_col="alleles", engine="python"
         ).fillna(0)
         # Close object and discard memory buffer
         dist_matrix.close()
