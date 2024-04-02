@@ -22,7 +22,7 @@ class ClusterDistance:
         ref_seq_name: str,
         resolution: float = 0.75,
         seed: int = None,
-        dist_value: float = 0.9,
+        dist_value: float = 0.85,
     ):
         """ClusterDistance instance creation
 
