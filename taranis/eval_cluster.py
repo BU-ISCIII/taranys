@@ -156,7 +156,7 @@ class EvaluateCluster:
             query_file.write(">" + r_id + "\n" + r_seq)
             query_file.seek(0)
             blast_result = self.blast_obj.run_blast(
-                query_file.read(), perc_identity=90, query_type="stdin"
+                query_file.read(), perc_identity=85, query_type="stdin"
             )
             # Close object and discard memory buffer
             query_file.close()
