@@ -547,10 +547,10 @@ class AlleleCalling:
                 )
             if self.aligment_request and result["allele_type"][allele_name] != "LNF":
                 # run alignment analysis
-                result["alignment_data"][
-                    allele_name
-                ] = taranis.utils.get_alignment_data(
-                    ref_allele_seq, allele_seq, ref_allele_name
+                result["alignment_data"][allele_name] = (
+                    taranis.utils.get_alignment_data(
+                        ref_allele_seq, allele_seq, ref_allele_name
+                    )
                 )
         # delete blast folder
         _ = taranis.utils.delete_folder(self.blast_dir)
