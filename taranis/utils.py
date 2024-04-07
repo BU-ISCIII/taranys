@@ -30,6 +30,7 @@ import warnings
 from Bio import BiopythonWarning
 
 import pdb
+
 log = logging.getLogger(__name__)
 
 
@@ -117,7 +118,10 @@ def check_additional_programs_installed(software_list: list) -> None:
             sys.exit(1)
     return
 
-def convert_to_protein(sequence: str, force_coding: bool =False, check_additional_bases: bool = False) -> dict:
+
+def convert_to_protein(
+    sequence: str, force_coding: bool = False, check_additional_bases: bool = False
+) -> dict:
     """Check if the input sequence is a coding protein.
 
     Args:
@@ -134,14 +138,14 @@ def convert_to_protein(sequence: str, force_coding: bool =False, check_additiona
         return {"error": "Sequence does not have a start codon"}
     if len(sequence) % 3 != 0:
         if not check_additional_bases:
-            return {"error" : "Sequence is not a multiple of three"}
+            return {"error": "Sequence is not a multiple of three"}
         # Remove the last or second to last bases to check if there is a stop codon
         new_seq_len = len(sequence) // 3 * 3
         sequence = sequence[:new_seq_len]
         # this error will be overwritten if another error is found
         conv_result["error"] = "additional bases added after stop codon"
 
-    seq_sequence = Seq(sequence)   
+    seq_sequence = Seq(sequence)
     try:
         seq_prot = seq_sequence.translate(table=1, cds=force_coding)
     except Bio.Data.CodonTable.TranslationError as e:
@@ -153,14 +157,13 @@ def convert_to_protein(sequence: str, force_coding: bool =False, check_additiona
     if not force_coding:
         first_stop = seq_prot.find("*")
         if first_stop != last_stop:
-            return {"error": "Multiple stop codons","protein": str(seq_prot)}
+            return {"error": "Multiple stop codons", "protein": str(seq_prot)}
     if last_stop != len(seq_prot) - 1:
         return {"error": "Last sequence is not a stop codon", "protein": str(seq_prot)}
     if "error" in conv_result:
         conv_result["protein"] = str(seq_prot)
         return conv_result
-    return {"protein": str(seq_prot)}       
-    
+    return {"protein": str(seq_prot)}
 
 
 def create_annotation_files(
@@ -425,22 +428,15 @@ def get_snp_information(
         dict: key: ref_sequence, value: list of snp information
     """
     # Supress warning that len of alt sequence  not a multiple of three
-    warnings.simplefilter('ignore', BiopythonWarning)
+    warnings.simplefilter("ignore", BiopythonWarning)
     snp_info = {}
     ref_protein = str(Seq(ref_sequence).translate())
-    try:
-        alt_protein = str(Seq(alt_sequence).translate())
-    except Exception as e:
-        import pdb; pdb.set_trace()
-        
-    if len(alt_sequence) %3 != 0:
-        import pdb; pdb.set_trace()
+    alt_protein = str(Seq(alt_sequence).translate())
 
     snp_line = []
     # get the shortest sequence for the loop
     length_for_snp = min(len(ref_sequence), len(alt_sequence))
     for idx in range(length_for_snp):
-
         if ref_sequence[idx] != alt_sequence[idx]:
             # calculate the triplet index
             triplet_idx = idx // 3
@@ -449,7 +445,10 @@ def get_snp_information(
             alt_triplet = alt_sequence[triplet_idx * 3 : triplet_idx * 3 + 3]
             # get amino acid change
             ref_aa = ref_protein[triplet_idx]
-            alt_aa = alt_protein[triplet_idx]
+            try:
+                alt_aa = alt_protein[triplet_idx]
+            except:
+                alt_aa = "-"
             # get amino acid category
             ref_category = map_amino_acid_to_annotation(ref_sequence[triplet_idx])
             alt_category = map_amino_acid_to_annotation(alt_sequence[triplet_idx])
@@ -679,8 +678,8 @@ def read_fasta_file(fasta_file: str, convert_to_dict=False) -> dict | str:
     if convert_to_dict:
         with open(fasta_file, "r") as fh:
             for record in SeqIO.parse(fh, "fasta"):
-                    conv_fasta[record.id] = str(record.seq)
-        return conv_fasta 
+                conv_fasta[record.id] = str(record.seq)
+        return conv_fasta
     return SeqIO.parse(fasta_file, "fasta")
 
 
