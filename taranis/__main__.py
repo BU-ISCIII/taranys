@@ -569,5 +569,5 @@ def allele_calling(
     )
     finish = time.perf_counter()
     print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
-    log.info("Allele calling finish in %s minutes", round((finish-start)/60, 2))
+    log.info("Allele calling finish in %s minutes", round((finish - start) / 60, 2))
     # sample_allele_obj.analyze_sample()

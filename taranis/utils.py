@@ -29,8 +29,6 @@ from collections import OrderedDict
 import warnings
 from Bio import BiopythonWarning
 
-import pdb
-
 log = logging.getLogger(__name__)
 
 
@@ -447,7 +445,13 @@ def get_snp_information(
             ref_aa = ref_protein[triplet_idx]
             try:
                 alt_aa = alt_protein[triplet_idx]
-            except:
+            except IndexError as e:
+                log.debug(
+                    "Unable to get amino acid for %s and %s with error %s",
+                    ref_allele_name,
+                    alt_sequence,
+                    e,
+                )
                 alt_aa = "-"
             # get amino acid category
             ref_category = map_amino_acid_to_annotation(ref_sequence[triplet_idx])
