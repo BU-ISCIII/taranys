@@ -12,8 +12,6 @@ from Bio.Seq import Seq
 from Bio import SeqIO
 from io import StringIO
 
-import pdb
-
 log = logging.getLogger(__name__)
 stderr = rich.console.Console(
     stderr=True,
@@ -316,7 +314,6 @@ class AlleleCalling:
                 prot_conv_result["protein"] if "protein" in prot_conv_result else "-"
             )
             # remove if additional sequenced are added at the end of the stop codon
-            # pdb.set_trace()
             if "additional bases added after stop codon" in prot_error_result:
                 new_seq_len = len(match_sequence) // 3 * 3
                 match_sequence = match_sequence[:new_seq_len]
@@ -489,7 +486,7 @@ class AlleleCalling:
 
             alleles = taranis.utils.read_fasta_file(ref_allele, convert_to_dict=True)
             match_found = False
-            """ 
+            """
             with open(ref_allele, "r") as fh:
                 for record in SeqIO.parse(fh, "fasta"):
                     alleles[record.id] = str(record.seq)
@@ -534,15 +531,17 @@ class AlleleCalling:
             # prepare the data for snp and alignment analysis
             try:
                 ref_allele_seq = result["allele_details"][allele_name][15]
-            except:
-                pdb.set_trace()
+            except KeyError as e:
+                log.error("Error in allele details")
+                log.error(e)
+                stderr.print(f"Error in allele details{e}")
+                continue
             allele_seq = result["allele_details"][allele_name][14]
             ref_allele_name = result["allele_details"][allele_name][3]
 
             if self.snp_request and result["allele_type"][allele_name] != "LNF":
                 # run snp analysis
-                print(allele_name)
-                # pdb.set_trace()
+                # print(allele_name)
                 result["snp_data"][allele_name] = taranis.utils.get_snp_information(
                     ref_allele_seq, allele_seq, ref_allele_name
                 )
