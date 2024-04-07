@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import Bio.Data.CodonTable
 import glob
 import gzip
 import io
@@ -22,8 +23,13 @@ import sys
 from pathlib import Path
 from Bio import SeqIO
 from Bio.Seq import Seq
+from collections import OrderedDict
 
 
+import warnings
+from Bio import BiopythonWarning
+
+import pdb
 log = logging.getLogger(__name__)
 
 
@@ -110,6 +116,51 @@ def check_additional_programs_installed(software_list: list) -> None:
             stderr.print("[red] Program " + program + " is not installed in the system")
             sys.exit(1)
     return
+
+def convert_to_protein(sequence: str, force_coding: bool =False, check_additional_bases: bool = False) -> dict:
+    """Check if the input sequence is a coding protein.
+
+    Args:
+        sequence (str): sequence to be checked
+        force_coding (bool, optional): force to check if sequence is coding. Defaults to False.
+        check_additional_bases (bool, optional): if not multiple by 3 remove the latest sequences to check they are added after the stop codon. Defaults to False.
+
+    Returns:
+        dict: protein sequence and/or error message
+    """
+    conv_result = {}
+    # checck if exists start codon
+    if sequence[0:3] not in START_CODON_FORWARD:
+        return {"error": "Sequence does not have a start codon"}
+    if len(sequence) % 3 != 0:
+        if not check_additional_bases:
+            return {"error" : "Sequence is not a multiple of three"}
+        # Remove the last or second to last bases to check if there is a stop codon
+        new_seq_len = len(sequence) // 3 * 3
+        sequence = sequence[:new_seq_len]
+        # this error will be overwritten if another error is found
+        conv_result["error"] = "additional bases added after stop codon"
+
+    seq_sequence = Seq(sequence)   
+    try:
+        seq_prot = seq_sequence.translate(table=1, cds=force_coding)
+    except Bio.Data.CodonTable.TranslationError as e:
+        log.info("Unable to translate sequence. Info message: %s ", e)
+        return {"error": e}
+    # get the latest stop codon
+    last_stop = seq_prot.rfind("*")
+    # if force_coding is False, check if there are multiple stop codons
+    if not force_coding:
+        first_stop = seq_prot.find("*")
+        if first_stop != last_stop:
+            return {"error": "Multiple stop codons","protein": str(seq_prot)}
+    if last_stop != len(seq_prot) - 1:
+        return {"error": "Last sequence is not a stop codon", "protein": str(seq_prot)}
+    if "error" in conv_result:
+        conv_result["protein"] = str(seq_prot)
+        return conv_result
+    return {"protein": str(seq_prot)}       
+    
 
 
 def create_annotation_files(
@@ -334,7 +385,6 @@ def get_multiple_alignment(input_buffer: io.StringIO) -> list[str]:
     Returns:
         list[str]: list of aligned sequences
     """
-    #
     output_buffer = io.StringIO()
     # Run MAFFT
     mafft_command = "mafft --auto --quiet -"  # "-" tells MAFFT to read from stdin
@@ -353,7 +403,7 @@ def get_multiple_alignment(input_buffer: io.StringIO) -> list[str]:
 
     # Close the file objects and process
     output_buffer.close()
-    process.close()
+    process.stdout.close()
 
     return multi_result
 
@@ -374,13 +424,24 @@ def get_snp_information(
     Returns:
         dict: key: ref_sequence, value: list of snp information
     """
+    # Supress warning that len of alt sequence  not a multiple of three
+    warnings.simplefilter('ignore', BiopythonWarning)
     snp_info = {}
     ref_protein = str(Seq(ref_sequence).translate())
-    alt_protein = str(Seq(alt_sequence).translate())
+    try:
+        alt_protein = str(Seq(alt_sequence).translate())
+    except Exception as e:
+        import pdb; pdb.set_trace()
+        
+    if len(alt_sequence) %3 != 0:
+        import pdb; pdb.set_trace()
 
     snp_line = []
-    for idx, (ref, alt) in enumerate(zip(ref_sequence, alt_sequence)):
-        if alt != ref:
+    # get the shortest sequence for the loop
+    length_for_snp = min(len(ref_sequence), len(alt_sequence))
+    for idx in range(length_for_snp):
+
+        if ref_sequence[idx] != alt_sequence[idx]:
             # calculate the triplet index
             triplet_idx = idx // 3
             # get triplet code
@@ -395,8 +456,8 @@ def get_snp_information(
             snp_line.append(
                 [
                     str(idx),
-                    ref,
-                    alt,
+                    ref_sequence[idx],
+                    alt_sequence[idx],
                     ref_triplet,
                     alt_triplet,
                     ref_aa,
@@ -604,7 +665,22 @@ def read_compressed_file(
     return out_data
 
 
-def read_fasta_file(fasta_file):
+def read_fasta_file(fasta_file: str, convert_to_dict=False) -> dict | str:
+    """Read the fasta file and return the data as a dictionary if convert_to_dict
+
+    Args:
+        fasta_file (str): _description_
+        convert_to_dict (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        dict: fasta id as key and sequence as value in str format
+    """
+    conv_fasta = OrderedDict()
+    if convert_to_dict:
+        with open(fasta_file, "r") as fh:
+            for record in SeqIO.parse(fh, "fasta"):
+                    conv_fasta[record.id] = str(record.seq)
+        return conv_fasta 
     return SeqIO.parse(fasta_file, "fasta")
 
 
