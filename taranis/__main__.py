@@ -451,6 +451,24 @@ def reference_alleles(
     help="Create alignment files",
 )
 @click.option(
+    "-q",
+    "--proteine-threshold",
+    required=False,
+    nargs=1,
+    default=80,
+    type=int,
+    help="Threshold of protein coverage to consider as TPR. default 90",
+)
+@click.option(
+    "-i",
+    "--increase-sequence",
+    required=False,
+    nargs=1,
+    default=20,
+    type=int,
+    help="Increase the number of triplet sequences to find the stop codon. default 20",
+)
+@click.option(
     "--cpus",
     required=False,
     multiple=False,
@@ -469,6 +487,8 @@ def allele_calling(
     force: bool,
     snp: bool,
     alignment: bool,
+    proteine_threshold: int,
+    increase_sequence: int,
     cpus: int,
 ):
     _ = taranis.utils.check_additional_programs_installed(
@@ -515,6 +535,8 @@ def allele_calling(
                 inf_allele_obj,
                 snp,
                 alignment,
+                proteine_threshold,
+                increase_sequence,
             )
             for assembly_file in assemblies
         ]
@@ -525,23 +547,27 @@ def allele_calling(
                 print(e)
                 continue
     """
-    results.append(
-        taranis.allele_calling.parallel_execution(
-            assemblies[0],
-            schema,
-            prediction_data,
-            schema_ref_files,
-            threshold,
-            perc_identity,
-            output,
-            inf_allele_obj,
-            snp,
-            alignment,
+    for assembly_file in assemblies:
+        results.append(
+            taranis.allele_calling.parallel_execution(
+                assembly_file,
+                schema,
+                prediction_data,
+                schema_ref_files,
+                threshold,
+                perc_identity,
+                output,
+                inf_allele_obj,
+                snp,
+                alignment,
+                proteine_threshold,
+                increase_sequence,
+            )
         )
-    )
     _ = taranis.allele_calling.collect_data(
         results, output, snp, alignment, schema_ref_files
     )
     finish = time.perf_counter()
     print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
+    log.info("Allele calling finish in %s minutes", round((finish-start)/60, 2))
     # sample_allele_obj.analyze_sample()
