@@ -24,7 +24,6 @@ from pathlib import Path
 from Bio import SeqIO
 from Bio.Seq import Seq
 from collections import OrderedDict
-import pdb
 
 import warnings
 from Bio import BiopythonWarning
@@ -430,10 +429,16 @@ def get_snp_information(
     warnings.simplefilter("ignore", BiopythonWarning)
     snp_info = {}
     ref_protein = str(Seq(ref_sequence).translate())
-    try:
-        alt_protein = str(Seq(alt_sequence).translate())
-    except:
-        pdb.set_trace()
+    if len(alt_sequence) % 3 != 0:
+        log.debug(
+            "Sequence %s is not a multiple of three. Removing last nucleotides",
+            ref_allele_name,
+        )
+        # remove the last nucleotides to be able to translate to protein
+        alt_sequence = alt_sequence[: len(alt_sequence) // 3 * 3]
+
+    alt_protein = str(Seq(alt_sequence).translate())
+
 
     snp_line = []
     # get the shortest sequence for the loop
