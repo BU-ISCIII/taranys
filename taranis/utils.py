@@ -24,7 +24,7 @@ from pathlib import Path
 from Bio import SeqIO
 from Bio.Seq import Seq
 from collections import OrderedDict
-
+import pdb
 
 import warnings
 from Bio import BiopythonWarning
@@ -118,30 +118,33 @@ def check_additional_programs_installed(software_list: list) -> None:
 
 
 def convert_to_protein(
-    sequence: str, force_coding: bool = False, check_additional_bases: bool = False
+    sequence: str, force_coding: bool = False, delete_incompleted_triplet: bool = False
 ) -> dict:
     """Check if the input sequence is a coding protein.
 
     Args:
         sequence (str): sequence to be checked
-        force_coding (bool, optional): force to check if sequence is coding. Defaults to False.
-        check_additional_bases (bool, optional): if not multiple by 3 remove the latest sequences to check they are added after the stop codon. Defaults to False.
+        force_coding (bool, optional): force to check if sequence is coding.
+            Defaults to False.
+        delete_incompleted_triplet (bool, optional): if not multiple by 3
+            remove the latest sequences to check they are added after the stop
+            codon. Defaults to False.
 
     Returns:
         dict: protein sequence and/or error message
     """
-    conv_result = {}
+    conv_result = {"error": "-"}
     # checck if exists start codon
     if sequence[0:3] not in START_CODON_FORWARD:
         return {"error": "Sequence does not have a start codon"}
     if len(sequence) % 3 != 0:
-        if not check_additional_bases:
+        if not delete_incompleted_triplet:
             return {"error": "Sequence is not a multiple of three"}
         # Remove the last or second to last bases to check if there is a stop codon
         new_seq_len = len(sequence) // 3 * 3
         sequence = sequence[:new_seq_len]
         # this error will be overwritten if another error is found
-        conv_result["error"] = "additional bases added after stop codon"
+        conv_result["error"] = "extra nucleotides after stop codon"
 
     seq_sequence = Seq(sequence)
     try:
@@ -155,13 +158,11 @@ def convert_to_protein(
     if not force_coding:
         first_stop = seq_prot.find("*")
         if first_stop != last_stop:
-            return {"error": "Multiple stop codons", "protein": str(seq_prot)}
+            conv_result["error"] = "Multiple stop codons"
     if last_stop != len(seq_prot) - 1:
-        return {"error": "Last sequence is not a stop codon", "protein": str(seq_prot)}
-    if "error" in conv_result:
-        conv_result["protein"] = str(seq_prot)
-        return conv_result
-    return {"protein": str(seq_prot)}
+        conv_result["error"] = "Last triplet sequence is not a stop codon"
+    conv_result["protein"] = str(seq_prot)
+    return conv_result
 
 
 def create_annotation_files(
@@ -429,7 +430,10 @@ def get_snp_information(
     warnings.simplefilter("ignore", BiopythonWarning)
     snp_info = {}
     ref_protein = str(Seq(ref_sequence).translate())
-    alt_protein = str(Seq(alt_sequence).translate())
+    try:
+        alt_protein = str(Seq(alt_sequence).translate())
+    except:
+        pdb.set_trace()
 
     snp_line = []
     # get the shortest sequence for the loop
