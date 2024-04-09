@@ -520,7 +520,7 @@ def allele_calling(
 
     start = time.perf_counter()
     results = []
-    """
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=cpus) as executor:
         futures = [
             executor.submit(
@@ -564,6 +564,7 @@ def allele_calling(
                 increase_sequence,
             )
         )
+    """
     _ = taranis.allele_calling.collect_data(
         results, output, snp, alignment, schema_ref_files
     )

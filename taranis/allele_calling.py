@@ -12,8 +12,6 @@ from Bio.Seq import Seq
 from Bio import SeqIO
 from io import StringIO
 
-import pdb
-
 log = logging.getLogger(__name__)
 stderr = rich.console.Console(
     stderr=True,
@@ -78,7 +76,7 @@ class AlleleCalling:
 
     def assign_allele_type(
         self,
-        blast_results: list,
+        valid_blast_results: list,
         allele_file: str,
         allele_name: str,
         ref_allele_seq: str,
@@ -86,7 +84,7 @@ class AlleleCalling:
         """Assign allele type to the allele
 
         Args:
-            blast_result (list): information collected by running blast
+            valid_blast_results (list): information collected by running blast
             allele_file (str): file name with allele sequence
             allele_name (str): allele name
             ref_allele_seq (str): reference allele sequence
@@ -115,24 +113,6 @@ class AlleleCalling:
             ):
                 return True
             return False
-
-        def _discard_low_threshold_results(blast_results: list) -> list:
-            """Discard blast results with lower threshold
-
-            Args:
-                blast_results (list): blast results
-
-            Returns:
-                list: blast results with higher query size
-            """
-            valid_blast_result = []
-            for b_result in blast_results:
-                blast_split = b_result.split("\t")
-                # check if the division of the match contig length by the
-                # reference allele length is higher than the threshold
-                if (int(blast_split[4]) / int(blast_split[3])) >= self.threshold:
-                    valid_blast_result.append(b_result)
-            return valid_blast_result
 
         def _extend_sequence_for_finding_start_stop_codon(
             split_blast_result: list,
@@ -188,8 +168,7 @@ class AlleleCalling:
                         # try extended 1 nucleotide to find the start codon
                         start_seq_found = False
                         # subtract 1 because index start at 0
-                        new_start_seq = start_seq - start_ref_allele -1
-                        # pdb.set_trace()
+                        new_start_seq = start_seq - start_ref_allele - 1
                         for _ in range(1, 3):
                             new_start_seq -= 1
                             if (
@@ -197,15 +176,18 @@ class AlleleCalling:
                                 in taranis.utils.START_CODON_FORWARD
                             ):
                                 # increase 1 because we substact 1 when searching
-                                # for stop codon 
+                                # for stop codon
                                 start_seq = new_start_seq + 1
                                 start_seq_found = True
                                 break
                                 # continue to find the stop codon with the new start
-                        # pdb.set_trace()
                         if not start_seq_found:
                             # start codon not found. Return the original blast result
-                            return split_blast_result, prot_error_result, predicted_prot_seq
+                            return (
+                                split_blast_result,
+                                prot_error_result,
+                                predicted_prot_seq,
+                            )
 
                     # adjust the sequence to be a triplet
                     interval = (stop_seq - start_seq) // 3 * 3
@@ -223,7 +205,6 @@ class AlleleCalling:
                     # sequence direction is reverse
                     direction = "reverse"
                     if search_codon == "start":
-                        # pdb.set_trace()
                         if (
                             contig_seq[start_seq - 2 : start_seq + 1]
                             in taranis.utils.START_CODON_REVERSE
@@ -232,8 +213,11 @@ class AlleleCalling:
                             # continue to find the stop codon with the new start
                         else:
                             # start codon not found. Return the original blast result
-                            return split_blast_result, prot_error_result, predicted_prot_seq
-                    # pdb.set_trace()
+                            return (
+                                split_blast_result,
+                                prot_error_result,
+                                predicted_prot_seq,
+                            )
                     # adjust the sequence to be a triplet
                     interval = (start_seq - stop_seq) // 3 * 3
                     new_stop_seq = start_seq - interval - self.increase_sequence
@@ -361,7 +345,6 @@ class AlleleCalling:
                 )
                 # update the match sequence
                 match_sequence = split_blast_result[13]
-                # pdb.set_trace()
             # extend the sequence to find the start codon
             elif "Sequence does not have a start codon" in prot_error_result:
                 (
@@ -374,10 +357,8 @@ class AlleleCalling:
                     predicted_prot_seq,
                     search_codon="start",
                 )
-                # pdb.set_trace()
                 # update the match sequence
                 match_sequence = split_blast_result[13]
-
             # get blast details
             blast_details = [
                 self.s_name,  # sample name
@@ -401,7 +382,7 @@ class AlleleCalling:
             ]
             return blast_details
 
-        def find_match_allele_schema(allele_file: str, match_sequence: str) -> str:
+        def _find_match_allele_schema(allele_file: str, match_sequence: str) -> str:
             """Find the allele name in the schema that match the sequence
 
             Args:
@@ -418,12 +399,11 @@ class AlleleCalling:
                 return grep_result[0].split("_")[1]
             return ""
 
-        valid_blast_results = _discard_low_threshold_results(blast_results)
+        # valid_blast_results = _discard_low_threshold_results(blast_results)
         match_allele_schema = ""
-        pdb.set_trace()
-        if len(valid_blast_results) == 0:
-            # no match results labelled as LNF. details data filled with empty data
-            return ["LNF", "LNF", ["-"] * 18]
+        # if len(valid_blast_results) == 0:
+        # no match results labelled as LNF. details data filled with empty data
+        #    return ["LNF", "LNF", ["-"] * 18]
         if len(valid_blast_results) > 1:
             # could  be NIPHEM or NIPH
             b_split_data = []
@@ -438,7 +418,7 @@ class AlleleCalling:
                 # check if match allele is in schema
                 if match_allele_schema == "":
                     # find the allele in schema with the match sequence in the contig
-                    match_allele_schema = find_match_allele_schema(
+                    match_allele_schema = _find_match_allele_schema(
                         allele_file, multi_allele_data[15]
                     )
             if len(set(match_allele_seq)) == 1:
@@ -455,7 +435,7 @@ class AlleleCalling:
                 valid_blast_results[0], allele_name, ref_allele_seq
             )
             # found the allele in schema with the match sequence in the contig
-            match_allele_schema = find_match_allele_schema(
+            match_allele_schema = _find_match_allele_schema(
                 allele_file, b_split_data[15]
             )
 
@@ -493,13 +473,30 @@ class AlleleCalling:
                 match_allele_schema = str(
                     self.inf_alle_obj.get_inferred_allele(b_split_data[14], allele_name)
                 )
-        pdb.set_trace()
         b_split_data[4] = classification + "_" + match_allele_schema
         return [
             classification,
             classification + "_" + match_allele_schema,
             b_split_data,
         ]
+
+    def discard_low_threshold_results(self, blast_results: list) -> list:
+        """Discard blast results with lower threshold
+
+        Args:
+            blast_results (list): blast results
+
+        Returns:
+            list: blast results with higher query size
+        """
+        valid_blast_result = []
+        for b_result in blast_results:
+            blast_split = b_result.split("\t")
+            # check if the division of the match contig length by the
+            # reference allele length is higher than the threshold
+            if (int(blast_split[4]) / int(blast_split[3])) >= self.threshold:
+                valid_blast_result.append(b_result)
+        return valid_blast_result
 
     def search_match_allele(self):
         # Create  blast db with sample file
@@ -541,8 +538,12 @@ class AlleleCalling:
                     query_type="stdin",
                 )
                 if len(blast_result) > 0:
-                    match_found = True
-                    break
+                    valid_blast_results = self.discard_low_threshold_results(
+                        blast_result
+                    )
+                    if len(valid_blast_results) > 0:
+                        match_found = True
+                        break
             # Close object and discard memory buffer
             query_file.close()
             allele_file = os.path.join(self.schema, os.path.basename(ref_allele))
@@ -553,15 +554,18 @@ class AlleleCalling:
                     result["allele_match"][allele_name],
                     result["allele_details"][allele_name],
                 ) = self.assign_allele_type(
-                    blast_result, allele_file, allele_name, r_seq
+                    valid_blast_results, allele_file, allele_name, r_seq
                 )
             else:
                 # Sample does not have a reference allele to be matched
                 # Keep LNF info
                 result["allele_type"][allele_name] = "LNF"
                 result["allele_match"][allele_name] = allele_name
-                result["allele_details"][allele_name] = "LNF"
-            pdb.set_trace()
+                details = ["-"] * 18
+                details[0] = self.s_name
+                details[2] = allele_name
+                details[4] = "LNF"
+                result["allele_details"][allele_name] = details
             # prepare the data for snp and alignment analysis
             try:
                 ref_allele_seq = result["allele_details"][allele_name][16]
@@ -580,13 +584,13 @@ class AlleleCalling:
                 )
             if self.aligment_request and result["allele_type"][allele_name] != "LNF":
                 # run alignment analysis
-                result["alignment_data"][allele_name] = (
-                    taranis.utils.get_alignment_data(
-                        ref_allele_seq, allele_seq, ref_allele_name
-                    )
+                result["alignment_data"][
+                    allele_name
+                ] = taranis.utils.get_alignment_data(
+                    ref_allele_seq, allele_seq, ref_allele_name
                 )
         # delete blast folder
-        _ = taranis.utils.delete_folder(self.blast_dir)
+        _ = taranis.utils.delete_folder(os.path.join(self.blast_dir, self.s_name))
         return result
 
 
@@ -789,7 +793,7 @@ def collect_data(
                 for allele, alignment_data in values["alignment_data"].items():
                     if allele not in align_collection:
                         align_collection[allele] = OrderedDict()
-                    
+
                     # align_collection[allele][sample] = []
                     for _, value in alignment_data.items():
                         align_collection[allele][sample] = value
@@ -797,7 +801,7 @@ def collect_data(
         for allele, samples in align_collection.items():
             with open(os.path.join(alignment_folder, allele + ".txt"), "w") as fo:
                 for sample, alignment_data in samples.items():
-                    fo.write(allele + "_sample_"  + sample + "\n")
+                    fo.write(allele + "_sample_" + sample + "\n")
                     fo.write("\n".join(alignment_data) + "\n")
 
         # create multiple alignment files
@@ -831,7 +835,7 @@ def collect_data(
                         input_buffer.write(values["allele_details"][a_list][15] + "\n")
                 # print(input_buffer.tell())
                 input_buffer.seek(0)
-                
+
                 allele_multiple_align.append(
                     taranis.utils.get_multiple_alignment(input_buffer)
                 )
