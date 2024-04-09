@@ -438,8 +438,6 @@ def get_snp_information(
         alt_sequence = alt_sequence[: len(alt_sequence) // 3 * 3]
 
     alt_protein = str(Seq(alt_sequence).translate())
-
-
     snp_line = []
     # get the shortest sequence for the loop
     length_for_snp = min(len(ref_sequence), len(alt_sequence))
