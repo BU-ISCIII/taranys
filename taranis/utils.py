@@ -377,18 +377,20 @@ def get_files_in_folder(folder: str, extension: str = None) -> list[str]:
     return glob.glob(folder_files)
 
 
-def get_multiple_alignment(input_buffer: io.StringIO) -> list[str]:
+def get_multiple_alignment(input_buffer: io.StringIO, mafft_cpus: int) -> list[str]:
     """Run MAFFT with input from the string buffer and capture output to another string buffer
 
     Args:
         input_buffer (io.StringIO): fasta sequences to be aligned
-
+        mafft_cpus (int): number of cpus to be used in mafft
     Returns:
         list[str]: list of aligned sequences
     """
     output_buffer = io.StringIO()
     # Run MAFFT
-    mafft_command = "mafft --auto --quiet -"  # "-" tells MAFFT to read from stdin
+    mafft_command = (
+        "mafft --auto --quiet --thread " + str(mafft_cpus) + " -"
+    )  # "-" tells MAFFT to read from stdin
     process = subprocess.Popen(
         mafft_command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE
     )

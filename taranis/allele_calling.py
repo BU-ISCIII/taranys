@@ -1,4 +1,5 @@
 import io
+import concurrent.futures
 import logging
 import os
 import rich.console
@@ -584,10 +585,10 @@ class AlleleCalling:
                 )
             if self.aligment_request and result["allele_type"][allele_name] != "LNF":
                 # run alignment analysis
-                result["alignment_data"][allele_name] = (
-                    taranis.utils.get_alignment_data(
-                        ref_allele_seq, allele_seq, ref_allele_name
-                    )
+                result["alignment_data"][
+                    allele_name
+                ] = taranis.utils.get_alignment_data(
+                    ref_allele_seq, allele_seq, ref_allele_name
                 )
         # delete blast folder
         _ = taranis.utils.delete_folder(os.path.join(self.blast_dir, self.s_name))
@@ -628,13 +629,70 @@ def parallel_execution(
     return {sample_name: allele_obj.search_match_allele()}
 
 
+def create_multiple_alignment(
+    ref_alleles_seq: dict, results: list, a_list: str, alignment_folder: str, mafft_cpus
+) -> None:
+    allele_multiple_align = []
+    for ref_id, ref_seq in ref_alleles_seq[a_list].items():
+        input_buffer = StringIO()
+        # get the reference allele sequence
+        input_buffer.write(">Ref_" + ref_id + "\n")
+        input_buffer.write(ref_seq + "\n")
+        # get the sequences for sample on the same allele
+        for result in results:
+            for sample, values in result.items():
+                # discard the allele if it is LNF
+                if values["allele_type"][a_list] == "LNF":
+                    continue
+                # get the allele name in sample
+                input_buffer.write(
+                    ">"
+                    + sample
+                    + "_"
+                    + a_list
+                    + "_"
+                    + values["allele_details"][a_list][4]
+                    + "\n"
+                )
+                # get the sequence of the allele in sample
+                input_buffer.write(values["allele_details"][a_list][15] + "\n")
+        # print(input_buffer.tell())
+        input_buffer.seek(0)
+
+        allele_multiple_align.append(
+            taranis.utils.get_multiple_alignment(input_buffer, mafft_cpus)
+        )
+        # release memory
+        input_buffer.close()
+    # save multiple alignment to file
+    with open(
+        os.path.join(alignment_folder, a_list + "_multiple_alignment.aln"), "w"
+    ) as fo:
+        for alignment in allele_multiple_align:
+            for align in alignment:
+                fo.write(align)
+
+
 def collect_data(
     results: list,
     output: str,
     snp_request: bool,
     aligment_request: bool,
     ref_alleles: list,
+    cpus: int,
 ) -> None:
+    """Collect data for the allele calling analysis, done for each sample and
+    create the summary file, graphics, and if requested snp and alignment files
+
+    Args:
+        results (list): list of allele calling data results for each sample
+        output (str): output folder
+        snp_request (bool): request to save snp to file
+        aligment_request (bool): request to save alignment and multi alignemte to file
+        ref_alleles (list): reference alleles
+        cpus (int): number of cpus to be used if alignment is requested
+    """
+
     def stats_graphics(stats_folder: str, summary_result: dict) -> None:
         stderr.print("Creating graphics")
         log.info("Creating graphics")
@@ -808,46 +866,33 @@ def collect_data(
         stderr.print("Processing multiple alignment information")
         log.info("Processing multiple alignment information")
         ref_alleles_seq = read_reference_alleles(ref_alleles)
-        for a_list in allele_list:
-            allele_multiple_align = []
-            for ref_id, ref_seq in ref_alleles_seq[a_list].items():
-                input_buffer = StringIO()
-                # get the reference allele sequence
-                input_buffer.write(">Ref_" + ref_id + "\n")
-                input_buffer.write(ref_seq + "\n")
-                # get the sequences for sample on the same allele
-                for result in results:
-                    for sample, values in result.items():
-                        # discard the allele if it is LNF
-                        if values["allele_type"][a_list] == "LNF":
-                            continue
-                        # get the allele name in sample
-                        input_buffer.write(
-                            ">"
-                            + sample
-                            + "_"
-                            + a_list
-                            + "_"
-                            + values["allele_details"][a_list][4]
-                            + "\n"
-                        )
-                        # get the sequence of the allele in sample
-                        input_buffer.write(values["allele_details"][a_list][15] + "\n")
-                # print(input_buffer.tell())
-                input_buffer.seek(0)
-
-                allele_multiple_align.append(
-                    taranis.utils.get_multiple_alignment(input_buffer)
+        # assign cpus to be used in multiple alignment
+        mul_align_cpus = 1 if cpus // 3 == 0 else cpus // 3
+        mafft_cpus = 1 if mul_align_cpus == 1 else 3
+        m_align = []
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=mul_align_cpus
+        ) as executor:
+            futures = [
+                executor.submit(
+                    create_multiple_alignment,
+                    ref_alleles_seq,
+                    results,
+                    a_list,
+                    alignment_folder,
+                    mafft_cpus,
                 )
-                # release memory
-                input_buffer.close()
-            # save multiple alignment to file
-            with open(
-                os.path.join(alignment_folder, a_list + "_multiple_alignment.aln"), "w"
-            ) as fo:
-                for alignment in allele_multiple_align:
-                    for align in alignment:
-                        fo.write(align)
+                for a_list in allele_list
+            ]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                m_align.append(future.result())
+            except Exception as e:
+                print(e)
+                continue
+
+        # for a_list in allele_list:
+        #     _ = create_multiple_alignment(ref_alleles_seq, results, a_list, alignment_folder)
 
     # Create graphics
     stats_graphics(output, summary_result)
