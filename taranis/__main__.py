@@ -505,7 +505,11 @@ def allele_calling(
         _ = taranis.utils.prompt_user_if_folder_exists(output)
     # Filter fasta files from reference folder
     # ref_alleles = glob.glob(os.path.join(reference, "*.fasta"))
-
+    max_cpus = taranis.utils.cpus_available()
+    if cpus > max_cpus:
+        stderr.print("[red] Number of CPUs bigger than the CPUs available")
+        stderr.print("Running code with ", max_cpus)
+        cpus = max_cpus
     # Read the annotation file
     stderr.print("[green] Reading annotation file")
     log.info("Reading annotation file")
@@ -566,7 +570,7 @@ def allele_calling(
         )
     """
     _ = taranis.allele_calling.collect_data(
-        results, output, snp, alignment, schema_ref_files
+        results, output, snp, alignment, schema_ref_files, cpus
     )
     finish = time.perf_counter()
     print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
