@@ -42,8 +42,7 @@ class ClusterDistance:
     def calculate_cluster_center(
         self, cluster_mtrx_idxs: tuple, dist_value: float
     ) -> int:
-        """Get the center allele for the cluster by selecting the allele closest
-            value to cluster mean
+        """Get the center allele for the cluster by selecting the allele with more alleles at > dist_value
 
         Args:
             cluster_mtrx_idxs (tuple): tuple with the filter indexes to create

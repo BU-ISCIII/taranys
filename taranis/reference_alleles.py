@@ -28,6 +28,7 @@ class ReferenceAlleles:
         kmer_size: int,
         sketch_size: int,
         cluster_resolution: float = 0.75,
+        eval_id: float = 85,
         seed: int = None,
     ):
         """ReferenceAlleles instance creation
@@ -48,6 +49,7 @@ class ReferenceAlleles:
         self.kmer_size = kmer_size
         self.sketch_size = sketch_size
         self.cluster_resolution = cluster_resolution
+        self.eval_id = eval_id
         self.seed = seed
         self.selected_locus = {}
         self.cluster_obj = None
@@ -138,8 +140,9 @@ class ReferenceAlleles:
         self.records = taranis.utils.read_fasta_file(self.fasta_file)
         dist_matrix_np, position_to_allele = self.create_distance_matrix()
         self.cluster_obj = taranis.clustering.ClusterDistance(
-            dist_matrix_np,
-            self.locus_name,
+            dist_matrix=dist_matrix_np,
+            ref_seq_name=self.locus_name,
+            dist_value=self.eval_id / 100,
         )
 
         for resolution in np.arange(self.cluster_resolution, 1, 0.025):
