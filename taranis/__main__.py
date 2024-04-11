@@ -3,7 +3,6 @@ import logging
 import click
 import concurrent.futures
 import glob
-import os
 import rich.console
 import rich.logging
 import rich.traceback
@@ -15,7 +14,7 @@ import taranis.analyze_schema
 import taranis.reference_alleles
 import taranis.allele_calling
 
-from pathlib import Path
+import taranis.inferred_alleles
 
 log = logging.getLogger()
 
@@ -217,6 +216,7 @@ def analyze_schema(
     usegenus: str,
     cpus: int,
 ):
+    _ = taranis.utils.check_additional_programs_installed([["prokka", "--version"]])
     schema_files = taranis.utils.get_files_in_folder(inputdir, "fasta")
 
     results = []
@@ -316,6 +316,12 @@ def analyze_schema(
     default=1,
     help="Number of cpus used for execution",
 )
+@click.option(
+    "--force/--no-force",
+    required=False,
+    default=False,
+    help="Overwrite the output folder if it exists",
+)
 def reference_alleles(
     schema: str,
     output: str,
@@ -325,7 +331,11 @@ def reference_alleles(
     cluster_resolution: float,
     seed: int,
     cpus: int,
+    force: bool,
 ):
+    _ = taranis.utils.check_additional_programs_installed(
+        [["mash", "--version"], ["makeblastdb", "-version"], ["blastn", "-version"]]
+    )
     start = time.perf_counter()
     max_cpus = taranis.utils.cpus_available()
     if cpus > max_cpus:
@@ -335,23 +345,8 @@ def reference_alleles(
     schema_files = taranis.utils.get_files_in_folder(schema, "fasta")
 
     # Check if output folder exists
-    if taranis.utils.folder_exists(output):
-        q_question = (
-            "Folder "
-            + output
-            + " already exists. Files will be overwritten. Do you want to continue?"
-        )
-        if "no" in taranis.utils.query_user_yes_no(q_question, "no"):
-            log.info("Aborting code by user request")
-            stderr.print("[red] Exiting code. ")
-            sys.exit(1)
-    else:
-        try:
-            os.makedirs(output)
-        except OSError as e:
-            log.info("Unable to create folder at %s with error %s", output, e)
-            stderr.print("[red] ERROR. Unable to create folder  " + output)
-            sys.exit(1)
+    if not force:
+        _ = taranis.utils.prompt_user_if_folder_exists(output)
     """Create the reference alleles from the schema """
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=cpus) as executor:
@@ -397,12 +392,44 @@ def reference_alleles(
     help="Directory where the schema reference allele files are located. ",
 )
 @click.option(
+    "-a",
+    "--annotation",
+    required=True,
+    multiple=False,
+    type=click.Path(exists=True),
+    help="Annotation file. ",
+)
+@click.option(
+    "-t",
+    "--threshold",
+    required=False,
+    nargs=1,
+    default=0.8,
+    type=float,
+    help="Threshold value to consider in blast. Values from 0 to 1. default 0.8",
+)
+@click.option(
+    "-p",
+    "--perc-identity",
+    required=False,
+    nargs=1,
+    default=90,
+    type=int,
+    help="Percentage of identity to consider in blast. default 90",
+)
+@click.option(
     "-o",
     "--output",
     required=True,
     multiple=False,
     type=click.Path(),
     help="Output folder to save reference alleles",
+)
+@click.option(
+    "--force/--no-force",
+    required=False,
+    default=False,
+    help="Overwrite the output folder if it exists",
 )
 @click.argument(
     "assemblies",
@@ -411,12 +438,62 @@ def reference_alleles(
     required=True,
     type=click.Path(exists=True),
 )
+@click.option(
+    "--snp/--no-snp",
+    required=False,
+    default=False,
+    help="Create SNP file for alleles in assembly in relation with reference allele",
+)
+@click.option(
+    "--alignment/--no-alignment",
+    required=False,
+    default=False,
+    help="Create alignment files",
+)
+@click.option(
+    "-q",
+    "--proteine-threshold",
+    required=False,
+    nargs=1,
+    default=80,
+    type=int,
+    help="Threshold of protein coverage to consider as TPR. default 90",
+)
+@click.option(
+    "-i",
+    "--increase-sequence",
+    required=False,
+    nargs=1,
+    default=20,
+    type=int,
+    help="Increase the number of triplet sequences to find the stop codon. default 20",
+)
+@click.option(
+    "--cpus",
+    required=False,
+    multiple=False,
+    type=int,
+    default=1,
+    help="Number of cpus used for execution",
+)
 def allele_calling(
-    schema,
-    reference,
-    assemblies,
-    output,
+    schema: str,
+    reference: str,
+    annotation: str,
+    assemblies: list,
+    threshold: float,
+    perc_identity: int,
+    output: str,
+    force: bool,
+    snp: bool,
+    alignment: bool,
+    proteine_threshold: int,
+    increase_sequence: int,
+    cpus: int,
 ):
+    _ = taranis.utils.check_additional_programs_installed(
+        [["blastn", "-version"], ["makeblastdb", "-version"], ["mafft", "--version"]]
+    )
     schema_ref_files = taranis.utils.get_files_in_folder(reference, "fasta")
     if len(schema_ref_files) == 0:
         log.error("Referenc allele folder %s does not have any fasta file", schema)
@@ -424,45 +501,78 @@ def allele_calling(
         sys.exit(1)
 
     # Check if output folder exists
-    if taranis.utils.folder_exists(output):
-        q_question = (
-            "Folder "
-            + output
-            + " already exists. Files will be overwritten. Do you want to continue?"
-        )
-        if "no" in taranis.utils.query_user_yes_no(q_question, "no"):
-            log.info("Aborting code by user request")
-            stderr.print("[red] Exiting code. ")
-            sys.exit(1)
-    else:
-        try:
-            os.makedirs(output)
-        except OSError as e:
-            log.info("Unable to create folder at %s with error %s", output, e)
-            stderr.print("[red] ERROR. Unable to create {output} folder")
-            sys.exit(1)
+    if not force:
+        _ = taranis.utils.prompt_user_if_folder_exists(output)
     # Filter fasta files from reference folder
     # ref_alleles = glob.glob(os.path.join(reference, "*.fasta"))
-    # Create predictions
+    max_cpus = taranis.utils.cpus_available()
+    if cpus > max_cpus:
+        stderr.print("[red] Number of CPUs bigger than the CPUs available")
+        stderr.print("Running code with ", max_cpus)
+        cpus = max_cpus
+    # Read the annotation file
+    stderr.print("[green] Reading annotation file")
+    log.info("Reading annotation file")
+    map_pred = [["gene", 7], ["product", 8], ["allele_quality", 9]]
+    prediction_data = taranis.utils.read_compressed_file(
+        annotation, separator=",", index_key=1, mapping=map_pred
+    )
+    # Create the instanace for inference alleles
+    inf_allele_obj = taranis.inferred_alleles.InferredAllele()
+    """Analyze the sample file against schema to identify alleles
+    """
 
-    """
-    pred_out = os.path.join(output, "prediction")
-    pred_sample = taranis.prediction.Prediction(genome, sample, pred_out)
-    pred_sample.training()
-    pred_sample.prediction()
-    """
-
-    """Analyze the sample file against schema to identify outbreakers
-    """
+    start = time.perf_counter()
     results = []
-    for assembly_file in assemblies:
-        assembly_name = Path(assembly_file).stem
-        results.append(
-            {
-                assembly_name: taranis.allele_calling.parallel_execution(
-                    assembly_file, schema, schema_ref_files, output
-                )
-            }
-        )
 
+    with concurrent.futures.ThreadPoolExecutor(max_workers=cpus) as executor:
+        futures = [
+            executor.submit(
+                taranis.allele_calling.parallel_execution,
+                assembly_file,
+                schema,
+                prediction_data,
+                schema_ref_files,
+                threshold,
+                perc_identity,
+                output,
+                inf_allele_obj,
+                snp,
+                alignment,
+                proteine_threshold,
+                increase_sequence,
+            )
+            for assembly_file in assemblies
+        ]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception as e:
+                print(e)
+                continue
+    """
+    for assembly_file in assemblies:
+        results.append(
+            taranis.allele_calling.parallel_execution(
+                assembly_file,
+                schema,
+                prediction_data,
+                schema_ref_files,
+                threshold,
+                perc_identity,
+                output,
+                inf_allele_obj,
+                snp,
+                alignment,
+                proteine_threshold,
+                increase_sequence,
+            )
+        )
+    """
+    _ = taranis.allele_calling.collect_data(
+        results, output, snp, alignment, schema_ref_files, cpus
+    )
+    finish = time.perf_counter()
+    print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
+    log.info("Allele calling finish in %s minutes", round((finish - start) / 60, 2))
     # sample_allele_obj.analyze_sample()

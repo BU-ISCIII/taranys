@@ -86,9 +86,11 @@ class AnalyzeSchema:
         with open(self.schema_allele) as fh:
             for record in SeqIO.parse(fh, "fasta"):
                 try:
-                    prokka_ann = prokka_annotation[record.id]
+                    prokka_ann = prokka_annotation[record.id]["gene"]
+                    product_annotation = prokka_annotation[record.id]["product"]
                 except Exception:
                     prokka_ann = "Not found in prokka"
+                    product_annotation = "Not found"
                 a_quality[record.id] = {
                     "allele_name": self.allele_name,
                     "quality": "Good quality",
@@ -97,6 +99,7 @@ class AnalyzeSchema:
                     "start_codon_alt": "standard",
                     "protein_seq": "",
                     "cds_coding": prokka_ann,
+                    "product_annotation": product_annotation,
                 }
                 allele_seq[record.id] = str(record.seq)
                 a_quality[record.id]["length"] = str(len(str(record.seq)))
@@ -370,6 +373,7 @@ def collect_statistics(data, out_folder, output_allele_annot):
             "nucleotide sequence length",
             "star codon",
             "CDS coding",
+            "product annotation",
             "allele quality",
             "bad quality reason",
         ]
@@ -380,6 +384,7 @@ def collect_statistics(data, out_folder, output_allele_annot):
             "length",
             "start_codon_alt",
             "cds_coding",
+            "product_annotation",
             "quality",
             "reason",
         ]
