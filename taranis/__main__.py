@@ -492,7 +492,7 @@ def allele_calling(
     cpus: int,
 ):
     _ = taranis.utils.check_additional_programs_installed(
-        [["blastn", "-version"], ["makeblastdb", "-version"]]
+        [["blastn", "-version"], ["makeblastdb", "-version"],["mafft", "--version"]]
     )
     schema_ref_files = taranis.utils.get_files_in_folder(reference, "fasta")
     if len(schema_ref_files) == 0:
