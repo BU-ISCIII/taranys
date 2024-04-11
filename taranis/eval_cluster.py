@@ -17,7 +17,7 @@ stderr = rich.console.Console(
 
 
 class EvaluateCluster:
-    def __init__(self, locus_path: str, locus_name: str, output: str):
+    def __init__(self, locus_path: str, locus_name: str, eval_id: float, output: str):
         """EvaluateCluster instance creation
 
         Args:
@@ -27,6 +27,7 @@ class EvaluateCluster:
         """
         self.locus_path = locus_path
         self.locus_name = locus_name
+        self.eval_id = eval_id
 
         self.output = os.path.join(output, "evaluate_cluster")
         taranis.utils.create_new_folder(self.output)
@@ -156,7 +157,7 @@ class EvaluateCluster:
             query_file.write(">" + r_id + "\n" + r_seq)
             query_file.seek(0)
             blast_result = self.blast_obj.run_blast(
-                query_file.read(), perc_identity=85, query_type="stdin"
+                query_file.read(), perc_identity=self.eval_id, query_type="stdin"
             )
             # Close object and discard memory buffer
             query_file.close()

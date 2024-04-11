@@ -278,7 +278,7 @@ def analyze_schema(
     "--eval-cluster/--no-eval-cluster",
     required=False,
     default=True,
-    help="Evaluate if the reference alleles match against blast with a 90% identity",
+    help="Evaluate if the reference alleles match against blast with the identity set in eval-identity param",
 )
 @click.option(
     "-k",
@@ -302,6 +302,14 @@ def analyze_schema(
     required=False,
     type=float,
     default=0.75,
+    help="Resolution value used for clustering.",
+)
+@click.option(
+    "-e",
+    "--eval-identity",
+    required=False,
+    type=float,
+    default=85,
     help="Resolution value used for clustering.",
 )
 @click.option(
@@ -332,6 +340,7 @@ def reference_alleles(
     kmer_size: int,
     sketch_size: int,
     cluster_resolution: float,
+    eval_identity: float,
     seed: int,
     cpus: int,
     force: bool,
@@ -362,6 +371,7 @@ def reference_alleles(
                 kmer_size,
                 sketch_size,
                 cluster_resolution,
+                eval_identity,
                 seed,
             )
             for f_file in schema_files
