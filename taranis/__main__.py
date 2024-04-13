@@ -3,12 +3,14 @@ import logging
 import click
 import concurrent.futures
 import glob
+import pandas as pd
 import rich.console
 import rich.logging
 import rich.traceback
 import sys
 import time
 
+import taranis.distance
 import taranis.utils
 import taranis.analyze_schema
 import taranis.reference_alleles
@@ -16,6 +18,7 @@ import taranis.allele_calling
 
 import taranis.inferred_alleles
 
+# import pdb
 log = logging.getLogger()
 
 # Set up rich stderr console
@@ -576,3 +579,116 @@ def allele_calling(
     print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
     log.info("Allele calling finish in %s minutes", round((finish - start) / 60, 2))
     # sample_allele_obj.analyze_sample()
+
+
+@taranis_cli.command(help_priority=3)
+@click.option(
+    "-a",
+    "--alleles",
+    required=True,
+    multiple=False,
+    type=click.Path(exists=True),
+    help="Alleles matrix file from which to obtain distances between samples",
+)
+@click.option(
+    "-o",
+    "--output",
+    required=True,
+    multiple=False,
+    type=click.Path(),
+    help="Output folder to save distance matrix",
+)
+@click.option(
+    "--force/--no-force",
+    required=False,
+    default=False,
+    help="Overwrite the output folder if it exists",
+)
+@click.option(
+    "-l",
+    "--locus-missing-threshold",
+    required=False,
+    multiple=False,
+    type=int,
+    default=100,
+    help="Threshold for missing alleles in locus, which loci is excluded from distance matrix",
+)
+@click.option(
+    "-s",
+    "--sample-missing-threshold",
+    required=False,
+    multiple=False,
+    type=int,
+    default=20,
+    help="Threshold for missing samples, which sample is excluded from distance matrix",
+)
+@click.option(
+    "--paralog-filter/--no-paralog-filter",
+    required=False,
+    multiple=False,
+    type=bool,
+    default=True,
+    help="Consider paralog tags (NIPH, NIPHEM) as missing values. Default is True",
+)
+@click.option(
+    "--lnf-filter/--no-lnf-filter",
+    required=False,
+    multiple=False,
+    type=bool,
+    default=True,
+    help="Consider LNF as missing values. Default is True",
+)
+@click.option(
+    "--plot-filter/--no-plot-filter",
+    required=False,
+    multiple=False,
+    type=bool,
+    default=True,
+    help="Consider PLOT as missing values. Default is True",
+)
+def distance_matrix(
+    alleles: str,
+    output: str,
+    force: bool,
+    locus_missing_threshold: int,
+    sample_missing_threshold: int,
+    paralog_filter: bool,
+    lnf_filter: bool,
+    plot_filter: bool,
+):
+    # Check if file exists
+    if not taranis.utils.file_exists(alleles):
+        log.error("Alleles matrix file %s does not exist", alleles)
+        stderr.print("[red] Alleles matrix file does not exist")
+        sys.exit(1)
+    # Check if output folder exists
+    if not force:
+        _ = taranis.utils.prompt_user_if_folder_exists(output)
+    start = time.perf_counter()
+    # filter the alleles matrix according to the thresholds and filters
+    allele_matrix = pd.read_csv(alleles, sep=",", index_col=0, header=0)
+    filtering_string = ["ASM", "ALM"]
+    if paralog_filter:
+        filtering_string.append("NIPH")
+        filtering_string.append("NIPHEM")
+    if lnf_filter:
+        filtering_string.append("LNF")
+    if plot_filter:
+        filtering_string.append("PLOT")
+    # pdb.set_trace()
+    filtered_allele = taranis.utils.filter_data_frame_by_parameters(
+        allele_matrix,
+        locus_missing_threshold,
+        sample_missing_threshold,
+        filtering_string,
+        replaced_by_zero=False,
+    )
+    # Create the distance matrix
+    # pdb.set_trace()
+    d_matrix_obj = taranis.distance.HammingDistance(filtered_allele)
+    distance_matrix = d_matrix_obj.create_matrix()
+    # pdb.set_trace()
+    print(distance_matrix)
+    finish = time.perf_counter()
+    print(f"Distance matrix finish in {round((finish-start)/60, 2)} minutes")
+    log.info("Distance matrix finish in %s minutes", round((finish - start) / 60, 2))

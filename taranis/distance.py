@@ -83,3 +83,52 @@ class DistanceMatrix:
         dist_matrix.close()
         log.debug(f"create distance for {allele_name}")
         return matrix_pd
+
+
+class HammingDistance:
+    def __init__(self, dist_matrix: pd.DataFrame) -> "HammingDistance":
+        """HammingDistance instance creation
+
+        Args:
+            dist_matrix (pd.DataFrame): Distance matrix
+
+        Returns:
+            HammingDistance: created hamming distance
+        """
+        self.dist_matrix = dist_matrix
+
+    def create_matrix(self) -> pd.DataFrame:
+        """Create hamming distance matrix using external program called mash
+
+        Returns:
+            pd.DataFrame: Hamming distance matrix as panda DataFrame
+        """
+
+        unique_values = pd.unique(
+            self.dist_matrix[list(self.dist_matrix.keys())].values.ravel("K")
+        )
+        # Create binary matrix ('1' or '0' ) matching the input matrix vs the unique_values[0]
+        # astype(int) is used to transform the boolean matrix into integer
+        U = self.dist_matrix.eq(unique_values[0]).astype(int)
+        # multiply the matrix with the transpose
+        H = U.dot(U.T)
+
+        # Repeat for each unique value
+        for unique_val in range(1, len(unique_values)):
+            U = self.dist_matrix.eq(unique_values[unique_val]).astype(int)
+            # Add the value of the binary matrix with the previous stored values
+            H = H.add(U.dot(U.T))
+
+        return len(self.dist_matrix.columns) - H
+
+        """
+         dist_matrix = self.dist_matrix
+        allele_names = dist_matrix.index
+        hamming_matrix = pd.DataFrame(index=allele_names, columns=allele_names)
+        for i in allele_names:
+            for j in allele_names:
+                hamming_matrix.at[i, j] = sum(
+                    dist_matrix.loc[i] != dist_matrix.loc[j]
+                )
+        return hamming_matrix
+        """
