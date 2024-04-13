@@ -349,7 +349,7 @@ def filter_data_frame_by_parameters(
         new_data_frame = data_frame.drop(columns=to_be_removed_columns)
     # pdb.set_trace()
     # remove the rows which the filter strings are higher than the threshold
-    row_threshold = row_thr * num_columns
+    # row_threshold = row_thr * num_columns
     return new_data_frame
 
 
