@@ -28,6 +28,8 @@ from collections import OrderedDict
 import warnings
 from Bio import BiopythonWarning
 
+# import pdb
+
 log = logging.getLogger(__name__)
 
 
@@ -317,6 +319,38 @@ def find_nearest_numpy_value(array, value):
     return array[idx]
 
  """
+
+
+def filter_data_frame_by_parameters(
+    data_frame: pd.DataFrame,
+    column_thr: int,
+    row_thr: int,
+    filter_str: list[str],
+    replaced_by_zero: bool,
+) -> pd.DataFrame:
+    # get the number of columns and rows
+    num_rows, num_columns = data_frame.shape
+    # remove the columns which the filter strings are higher than the threshold
+    column_threshold = column_thr * num_rows / 100
+    # Condition: Check if any string in the filter list is present in each cell of the DataFrame
+    f_condition = data_frame.apply(
+        lambda column: column.astype(str).str.contains("|".join(filter_str), na=False)
+    )
+    if replaced_by_zero:
+        new_data_frame = data_frame.mask(f_condition, 0)
+    else:
+        # Count the number of hits per column
+        hits_per_column = f_condition.sum()
+        # pdb.set_trace()
+        # Filter for removing columns where the count of hits is higher than the threshold
+        to_be_removed_columns = hits_per_column[
+            hits_per_column > column_threshold
+        ].index
+        new_data_frame = data_frame.drop(columns=to_be_removed_columns)
+    # pdb.set_trace()
+    # remove the rows which the filter strings are higher than the threshold
+    # row_threshold = row_thr * num_columns
+    return new_data_frame
 
 
 def folder_exists(folder_to_check):
