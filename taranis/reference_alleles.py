@@ -193,6 +193,7 @@ def parallel_execution(
     kmer_size: int,
     sketch_size: int,
     cluster_resolution: float,
+    eval_identity: float,
     seed: int,
 ):
     """Parallel execution of the reference alleles creation
@@ -213,6 +214,7 @@ def parallel_execution(
         kmer_size,
         sketch_size,
         cluster_resolution,
+        eval_identity,
         seed,
     )
     return ref_alleles_obj.create_ref_alleles()
