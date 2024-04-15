@@ -160,7 +160,7 @@ class ReferenceAlleles:
             # evaluate clusters aginst blast results
             stderr.print(f"Evaluating clusters for {self.locus_name}")
             evaluation_obj = taranis.eval_cluster.EvaluateCluster(
-                self.fasta_file, self.locus_name, self.output
+                self.fasta_file, self.locus_name, self.eval_id, self.output
             )
             evaluation_result = evaluation_obj.evaluate_clusters(
                 allele_data["alleles_in_cluster"],
