@@ -118,9 +118,7 @@ def check_additional_programs_installed(software_list: list) -> None:
     return
 
 
-def convert_to_protein(
-    sequence: str, force_coding: bool = False
-) -> dict:
+def convert_to_protein(sequence: str, force_coding: bool = False) -> dict:
     """Check if the input sequence is a coding protein.
 
     Args:
@@ -147,8 +145,9 @@ def convert_to_protein(
     try:
         # Table 11 is for bacteria, archaea and chloroplast
         protein = seq.translate(table=11, to_stop=False, cds=force_coding)
-    except Bio.Data.CodonTable.TranslationError as error_detail:
+    except Bio.Data.CodonTable.TranslationError as e:
         error = True
+        error_detail = str(e)
         log.debug(f"Error when translating protein {error_detail}")
 
     return direction, str(protein), error, error_detail

@@ -73,7 +73,7 @@ class AlleleCalling:
         self.snp_request = snp_request
         self.aligment_request = aligment_request
         self.tpr_limit = tpr_limit / 100
-        self.increase_sequence = increase_sequence * 3
+        self.increase_sequence = increase_sequence
 
     def assign_allele_type(
         self,
@@ -140,13 +140,14 @@ class AlleleCalling:
             protein = "-"
             error = False
             error_details = "-"
+            i = 0
 
             # Extend the sequence to find a valid start or stop codon
             if direction == "reverse":
-                contig_seq = contig_seq.reverse_complement()
+                contig_seq = Seq(contig_seq).reverse_complement()
                 start, end = len(contig_seq) - end, len(contig_seq) - start
-            import pdb; pdb.set_trace()
-            for i in range(1, limit + 1):
+            for _ in range(limit):
+                i += 3
                 if search == "5_prime":
                     extended_start = max(0, start - i)
                     extended_end = end
@@ -195,6 +196,7 @@ class AlleleCalling:
             """
             split_blast_result = blast_result.split("\t")
             match_allele_name = split_blast_result[0]
+
             try:
                 gene_annotation = self.prediction_data[match_allele_name]["gene"]
                 product_annotation = self.prediction_data[match_allele_name]["product"]
@@ -205,23 +207,41 @@ class AlleleCalling:
                 gene_annotation = "Not found"
                 product_annotation = "Not found"
                 allele_quality = "Not found"
+
             if int(split_blast_result[10]) > int(split_blast_result[9]):
                 strand = "+"
             else:
                 strand = "-"
+
             # remove the gaps in sequences
             match_sequence = split_blast_result[13].replace("-", "")
             # check if the sequence is coding
             direction, protein, prot_error, prot_error_details = (
                 taranis.utils.convert_to_protein(match_sequence, force_coding=True)
             )
-            start = split_blast_result[9]
-            end = split_blast_result[10]
+
+            # 0/1-based
+            if strand == "+":
+                start = int(split_blast_result[9]) - 1
+                end = int(split_blast_result[10])
+            else:
+                start = int(split_blast_result[10]) - 1
+                end = int(split_blast_result[9])
+
             if prot_error:
+                # If strand "-" contig seq is reverse complemented but match sequence (split_blast_result[13])
+                # is forward, so we need to change the contig seq to reverse_complement accordingly
+                if strand == "-" and direction == "reverse":
+                    direction_contig = "forward"
+                elif strand == "-" and direction == "forward":
+                    direction_contig = "reverse"
+                else:
+                    direction_contig = direction
+
                 if "is not a stop codon" in prot_error_details:
                     protein, new_start, new_end, prot_error, prot_error_details = (
                         _extend_seq_find_start_stop_codon(
-                            direction=direction,
+                            direction=direction_contig,
                             contig_seq=self.sample_contigs[split_blast_result[1]],
                             start=start,
                             end=end,
@@ -236,8 +256,8 @@ class AlleleCalling:
                         _extend_seq_find_start_stop_codon(
                             direction=direction,
                             contig_seq=self.sample_contigs[split_blast_result[1]],
-                            start=split_blast_result[9],
-                            end=split_blast_result[10],
+                            start=start,
+                            end=end,
                             limit=self.increase_sequence,
                             search="5_prime",
                         )
@@ -278,7 +298,10 @@ class AlleleCalling:
                 str: allele name in the schema that match the sequence
             """
             # Read the fasta file and create a dictionary mapping sequences to their record IDs
-            sequence_dict = {str(record.seq): record.id for record in SeqIO.parse(allele_file, "fasta")}
+            sequence_dict = {
+                str(record.seq): record.id
+                for record in SeqIO.parse(allele_file, "fasta")
+            }
 
             # Check if the match_sequence is in the dictionary and return the corresponding record ID part
             if match_sequence in sequence_dict:
@@ -329,16 +352,18 @@ class AlleleCalling:
                 # match allele is partial length labelled as PLOT
                 classification = "PLOT"
             # check if protein translation has failed and set to TPR
-            elif (
-                b_split_data[14] != "-"
-            ):
+            elif b_split_data[14] != "-":
                 classification = "TPR"
             # check if match allele is shorter than reference allele
-            elif int(b_split_data[6]) < int(b_split_data[5]) - int(b_split_data[5]) * 0.20:
+            elif (
+                int(b_split_data[6])
+                < int(b_split_data[5]) - int(b_split_data[5]) * 0.20
+            ):
                 classification = "ASM"
             # check if match allele is longer than reference allele
             elif (
-                int(b_split_data[6]) > int(b_split_data[5]) + int(b_split_data[5]) * 0.20
+                int(b_split_data[6])
+                > int(b_split_data[5]) + int(b_split_data[5]) * 0.20
             ):
                 classification = "ALM"
             else:
@@ -453,7 +478,12 @@ class AlleleCalling:
                 result["allele_details"][locus_name] = details
 
             # prepare the data for snp and alignment analysis
-            if result["allele_type"][locus_name] not in ["PLOT", "LNF", "NIPH", "NIPHEM"]:
+            if result["allele_type"][locus_name] not in [
+                "PLOT",
+                "LNF",
+                "NIPH",
+                "NIPHEM",
+            ]:
                 try:
                     ref_allele_seq = result["allele_details"][locus_name][16]
                 except KeyError as e:
