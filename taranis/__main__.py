@@ -414,12 +414,12 @@ def reference_alleles(
 )
 @click.option(
     "-t",
-    "--threshold",
+    "--hit_lenght_perc",
     required=False,
     nargs=1,
     default=0.8,
     type=float,
-    help="Threshold value to consider in blast. Values from 0 to 1. default 0.8",
+    help="Threshold value to consider in blast hit percentage regarding the reference length. Values from 0 to 1. default 0.8",
 )
 @click.option(
     "-p",
@@ -494,7 +494,7 @@ def allele_calling(
     reference: str,
     annotation: str,
     assemblies: list,
-    threshold: float,
+    hit_lenght_perc: float,
     perc_identity: int,
     output: str,
     force: bool,
@@ -546,7 +546,7 @@ def allele_calling(
                 schema,
                 prediction_data,
                 schema_ref_files,
-                threshold,
+                hit_lenght_perc,
                 perc_identity,
                 output,
                 inf_allele_obj,

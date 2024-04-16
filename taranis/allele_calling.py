@@ -29,7 +29,7 @@ class AlleleCalling:
         schema: str,
         annotation: dict,
         reference_alleles: list,
-        threshold: float,
+        hit_lenght_perc: float,
         perc_identity: int,
         out_folder: str,
         inf_alle_obj: object,
@@ -55,12 +55,12 @@ class AlleleCalling:
         """
         self.prediction_data = annotation  # store prediction annotation
         self.sample_file = sample_file
-        self.sample_records = taranis.utils.read_fasta_file(
+        self.sample_contigs = taranis.utils.read_fasta_file(
             self.sample_file, convert_to_dict=True
         )
         self.schema = schema
         self.ref_alleles = reference_alleles
-        self.threshold = threshold
+        self.hit_lenght_perc = hit_lenght_perc
         self.perc_identity = perc_identity
         self.out_folder = out_folder
         self.s_name = Path(sample_file).stem
@@ -156,7 +156,7 @@ class AlleleCalling:
                 # function return the original blast result
                 split_blast_result[13] = split_blast_result[13].replace("-", "")
                 # fetch the sequence until the last triplet is stop codon
-                contig_seq = self.sample_records[split_blast_result[1]]
+                contig_seq = self.sample_contigs[split_blast_result[1]]
                 start_seq = int(split_blast_result[9])
                 stop_seq = int(split_blast_result[10])
                 if stop_seq > start_seq:
@@ -317,23 +317,26 @@ class AlleleCalling:
             prot_conv_result = taranis.utils.convert_to_protein(
                 match_sequence, force_coding=False, delete_incompleted_triplet=True
             )
-            prot_error_result = (
-                prot_conv_result["error"] if "error" in prot_conv_result else "-"
-            )
-            predicted_prot_seq = (
-                prot_conv_result["protein"] if "protein" in prot_conv_result else "-"
-            )
+            # de lo anterior saco, direccion, proteina, error
+            # prot_error_result = (
+            #     prot_conv_result["error"] if "error" in prot_conv_result else "-"
+            # )
+            # predicted_prot_seq = (
+            #     prot_conv_result["protein"] if "protein" in prot_conv_result else "-"
+            # )
             # remove if extra nucleotides are added at the end of the last
             # completed triplet before the stop codon
-            if "extra nucleotides after stop codon" in prot_error_result:
-                new_seq_len = len(match_sequence) // 3 * 3
-                match_sequence = match_sequence[:new_seq_len]
-                split_blast_result[4] = str(new_seq_len)
-                # reset the error message
-                prot_error_result = "-"
+            # if "extra nucleotides after stop codon" in prot_error_result:
+            #     new_seq_len = len(match_sequence) // 3 * 3
+            #     match_sequence = match_sequence[:new_seq_len]
+            #     split_blast_result[4] = str(new_seq_len)
+            #     # reset the error message
+            #     prot_error_result = "-"
 
             # extend the sequence to find the stop codon
-            elif "Last triplet sequence is not a stop codon" in prot_error_result:
+            # check como saca esto el translate protein
+            if "not stop codon" in prot_error_result:
+                # le paso start, end, direccion, buscar stop
                 (
                     split_blast_result,
                     prot_error_result,
@@ -347,7 +350,9 @@ class AlleleCalling:
                 # update the match sequence
                 match_sequence = split_blast_result[13]
             # extend the sequence to find the start codon
-            elif "Sequence does not have a start codon" in prot_error_result:
+            # check como saca este error el translate protein
+            elif "not start codon" in prot_error_result:
+                # le paso start, end, direccion, buscar start
                 (
                     split_blast_result,
                     prot_error_result,
@@ -495,13 +500,26 @@ class AlleleCalling:
             blast_split = b_result.split("\t")
             # check if the division of the match contig length by the
             # reference allele length is higher than the threshold
-            if (int(blast_split[4]) / int(blast_split[3])) >= self.threshold:
+            if (int(blast_split[4]) / int(blast_split[3])) >= self.hit_lenght_perc:
                 valid_blast_result.append(b_result)
         return valid_blast_result
 
     def search_match_allele(self):
-        # Create  blast db with sample file
+        """
 
+        Args:
+            
+
+        Returns:
+            result = {
+                "allele_type": {},
+                "allele_match": {},
+                "allele_details": {},
+                "snp_data": {},
+                "alignment_data": {},
+            }
+            
+        """
         result = {
             "allele_type": {},
             "allele_match": {},
@@ -545,10 +563,12 @@ class AlleleCalling:
                     if len(valid_blast_results) > 0:
                         match_found = True
                         break
-            # Close object and discard memory buffer
-            query_file.close()
+                # Close object and discard memory buffer
+                query_file.close()
+
             allele_file = os.path.join(self.schema, os.path.basename(ref_allele))
             allele_name = Path(allele_file).stem
+
             if match_found:
                 (
                     result["allele_type"][allele_name],
@@ -591,7 +611,7 @@ class AlleleCalling:
                     )
                 )
         # delete blast folder
-        _ = taranis.utils.delete_folder(os.path.join(self.blast_dir, self.s_name))
+        # _ = taranis.utils.delete_folder(os.path.join(self.blast_dir, self.s_name))
         return result
 
 
@@ -600,7 +620,7 @@ def parallel_execution(
     schema: str,
     prediction_data: dict,
     reference_alleles: list,
-    threshold: float,
+    hit_lenght_perc: float,
     perc_identity: int,
     out_folder: str,
     inf_alle_obj: object,
@@ -614,7 +634,7 @@ def parallel_execution(
         schema,
         prediction_data,
         reference_alleles,
-        threshold,
+        hit_lenght_perc,
         perc_identity,
         out_folder,
         inf_alle_obj,
