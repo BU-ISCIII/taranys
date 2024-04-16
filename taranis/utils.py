@@ -90,7 +90,7 @@ def get_seq_direction(allele_sequence):
         or allele_sequence[0:3] in STOP_CODON_REVERSE
     ):
         return "reverse"
-    return "Error"
+    return "both"
 
 
 def check_additional_programs_installed(software_list: list) -> None:
@@ -119,7 +119,7 @@ def check_additional_programs_installed(software_list: list) -> None:
 
 
 def convert_to_protein(
-    sequence: str, force_coding: bool = False, delete_incompleted_triplet: bool = False
+    sequence: str, force_coding: bool = False
 ) -> dict:
     """Check if the input sequence is a coding protein.
 
@@ -127,43 +127,29 @@ def convert_to_protein(
         sequence (str): sequence to be checked
         force_coding (bool, optional): force to check if sequence is coding.
             Defaults to False.
-        delete_incompleted_triplet (bool, optional): if not multiple by 3
-            remove the latest sequences to check they are added after the stop
-            codon. Defaults to False.
 
     Returns:
-        dict: protein sequence and/or error message
+        direction(str): reverse or forward
+        protein (str): 1protein sequence and/or error message
     """
-    conv_result = {"error": "-"}
-    # checck if exists start codon
-    if sequence[0:3] not in START_CODON_FORWARD:
-        return {"error": "Sequence does not have a start codon"}
-    if len(sequence) % 3 != 0:
-        if not delete_incompleted_triplet:
-            return {"error": "Sequence is not a multiple of three"}
-        # Remove the last or second to last bases to check if there is a stop codon
-        new_seq_len = len(sequence) // 3 * 3
-        sequence = sequence[:new_seq_len]
-        # this error will be overwritten if another error is found
-        conv_result["error"] = "extra nucleotides after stop codon"
+    protein = "-"
+    error = False
+    error_detail = "-"
 
-    seq_sequence = Seq(sequence)
+    direction = get_seq_direction(sequence)
+
+    seq = Seq(sequence)
+
+    if direction == "reverse":
+        seq = seq.reverse_complement()
     try:
-        seq_prot = seq_sequence.translate(table=1, cds=force_coding)
-    except Bio.Data.CodonTable.TranslationError as e:
-        log.info("Unable to translate sequence. Info message: %s ", e)
-        return {"error": e}
-    # get the latest stop codon
-    last_stop = seq_prot.rfind("*")
-    # if force_coding is False, check if there are multiple stop codons
-    if not force_coding:
-        first_stop = seq_prot.find("*")
-        if first_stop != last_stop:
-            conv_result["error"] = "Multiple stop codons"
-    if last_stop != len(seq_prot) - 1:
-        conv_result["error"] = "Last triplet sequence is not a stop codon"
-    conv_result["protein"] = str(seq_prot)
-    return conv_result
+        # Table 11 is for bacteria, archaea and chloroplast
+        protein = seq.translate(table=11, to_stop=False, cds=force_coding)
+    except Bio.Data.CodonTable.TranslationError as error_detail:
+        error = True
+        log.debug(f"Error when translating protein {error_detail}")
+
+    return direction, str(protein), error, error_detail
 
 
 def create_annotation_files(
