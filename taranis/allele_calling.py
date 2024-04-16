@@ -277,12 +277,14 @@ class AlleleCalling:
             Returns:
                 str: allele name in the schema that match the sequence
             """
-            grep_result = taranis.utils.grep_execution(
-                allele_file, match_sequence, "-xb1"
-            )
-            if len(grep_result) > 0:
-                return grep_result[0].split("_")[1]
-            return ""
+            # Read the fasta file and create a dictionary mapping sequences to their record IDs
+            sequence_dict = {str(record.seq): record.id for record in SeqIO.parse(allele_file, "fasta")}
+
+            # Check if the match_sequence is in the dictionary and return the corresponding record ID part
+            if match_sequence in sequence_dict:
+                return sequence_dict[match_sequence]
+
+            return ""  # Return an empty string if no match is found
 
         # valid_blast_results = _discard_low_threshold_results(blast_results)
         match_allele_schema = ""
@@ -336,12 +338,11 @@ class AlleleCalling:
                 # labelled as TPR
                 classification = "TPR"
                 # check if match allele is shorter than reference allele
-            elif int(b_split_data[6]) < int(b_split_data[5]):
+            elif int(b_split_data[6]) < int(b_split_data[5]) - int(b_split_data[5]) * 0.20:
                 classification = "ASM"
             # check if match allele is longer than reference allele
             elif (
-                int(b_split_data[6]) > int(b_split_data[5])
-                or b_split_data[14] == "Last sequence is not a stop codon"
+                int(b_split_data[6]) > int(b_split_data[5]) + int(b_split_data[5]) * 0.20
             ):
                 classification = "ALM"
             else:
