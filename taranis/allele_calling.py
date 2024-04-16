@@ -215,7 +215,6 @@ class AlleleCalling:
             direction, protein, prot_error, prot_error_details = (
                 taranis.utils.convert_to_protein(match_sequence, force_coding=True)
             )
-            import pdb; pdb.set_trace()
             start = split_blast_result[9]
             end = split_blast_result[10]
             if prot_error:
@@ -245,7 +244,6 @@ class AlleleCalling:
                     )
                     start = new_start
                     end = new_end
-
             # get blast details
             blast_details = [
                 self.s_name,  # sample name
@@ -291,11 +289,12 @@ class AlleleCalling:
         # if len(valid_blast_results) == 0:
         # no match results labelled as LNF. details data filled with empty data
         #    return ["LNF", "LNF", ["-"] * 18]
-        import pdb; pdb.set_trace()
+
         if len(valid_blast_results) > 1:
             # could  be NIPHEM or NIPH
             b_split_data = []
             match_allele_seq = []
+
             for valid_blast_result in valid_blast_results:
                 multi_allele_data = _get_blast_details(
                     valid_blast_result, locus_name, ref_allele_seq
@@ -303,21 +302,12 @@ class AlleleCalling:
                 # get match allele sequence
                 match_allele_seq.append(multi_allele_data[14])
                 b_split_data.append(multi_allele_data)
-                # check if match allele is in schema
-                if match_allele_schema == "":
-                    # find the allele in schema with the match sequence in the contig
-                    match_allele_schema = _find_match_allele_schema(
-                        locus_file, multi_allele_data[15]
-                    )
             if len(set(match_allele_seq)) == 1:
                 # all sequuences are equal labelled as NIPHEM
                 classification = "NIPHEM"
             else:
                 # some of the sequences are different labelled as NIPH
                 classification = "NIPH"
-            # update coding allele type
-            for (idx,) in range(len(b_split_data)):
-                b_split_data[idx][4] = classification + "_" + match_allele_schema
         else:
             b_split_data = _get_blast_details(
                 valid_blast_results[0], locus_name, ref_allele_seq
@@ -326,7 +316,6 @@ class AlleleCalling:
             match_allele_schema = _find_match_allele_schema(
                 locus_file, b_split_data[15]
             )
-
             # PLOT, TPR, ASM, ALM, INF, EXC are possible classifications
             if match_allele_schema != "":
                 # exact match found labelled as EXC
@@ -355,7 +344,6 @@ class AlleleCalling:
             else:
                 # if sequence was not found after running grep labelled as INF
                 classification = "INF"
-
             # assign an identification value to the new allele
             if match_allele_schema == "":
                 match_allele_schema = str(
@@ -413,12 +401,7 @@ class AlleleCalling:
         for ref_allele in self.ref_alleles:
             count += 1
             log.debug(
-                " Processing allele ",
-                ref_allele,
-                " ",
-                count,
-                " of ",
-                len(self.ref_alleles),
+                f"Processing allele {ref_allele}: {count} of {len(self.ref_alleles)}"
             )
 
             alleles = taranis.utils.read_fasta_file(ref_allele, convert_to_dict=True)
@@ -427,7 +410,7 @@ class AlleleCalling:
             for r_id, r_seq in alleles.items():
                 count_2 += 1
 
-                log.debug("Running blast for ", count_2, " of ", len(alleles))
+                log.debug(f"Running blast for {count_2} of  {len(alleles)}")
                 # create file in memory to increase speed
                 query_file = io.StringIO()
                 query_file.write(">" + r_id + "\n" + r_seq)
@@ -447,7 +430,6 @@ class AlleleCalling:
                         break
                 # Close object and discard memory buffer
                 query_file.close()
-
             locus_file = os.path.join(self.schema, os.path.basename(ref_allele))
             locus_name = Path(locus_file).stem
 
