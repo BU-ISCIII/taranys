@@ -130,7 +130,9 @@ def convert_to_protein(
 
     Returns:
         direction(str): reverse or forward
-        protein (str): 1protein sequence and/or error message
+        protein (str): protein sequence
+        error (bool): True/False
+        error_detail (str): translate method error
     """
     protein = "-"
     error = False
@@ -500,30 +502,6 @@ def get_snp_information(
             )
     snp_info[ref_allele_name] = snp_line
     return snp_info
-
-
-def grep_execution(input_file: str, pattern: str, parameters: str) -> list[str]:
-    """run grep command and return the output
-
-    Args:
-        input_file (str): input file path
-        pattern (str): pattern to be searched
-        parmeters (str): parameters to be used in grep
-
-    Returns:
-        list[str]: list of lines which match the pattern
-    """
-    try:
-        result = subprocess.run(
-            ["grep", parameters, pattern, input_file],
-            capture_output=True,
-            check=True,
-            text=True,
-        )
-    except subprocess.CalledProcessError as e:
-        log.debug("Unable to run grep. Error message: %s ", e)
-        return []
-    return result.stdout.split("\n")
 
 
 def map_amino_acid_to_annotation(amino_acid):
