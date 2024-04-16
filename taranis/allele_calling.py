@@ -328,16 +328,12 @@ class AlleleCalling:
             elif _check_if_plot(b_split_data):
                 # match allele is partial length labelled as PLOT
                 classification = "PLOT"
-            # check if protein length divided by the length of triplet matched
-            # sequence is lower the the tpr limit
+            # check if protein translation has failed and set to TPR
             elif (
-                b_split_data[14] == "Multiple stop codons"
-                and b_split_data[17].index("*") / (int(b_split_data[6]) / 3)
-                < self.tpr_limit
+                b_split_data[14] != "-"
             ):
-                # labelled as TPR
                 classification = "TPR"
-                # check if match allele is shorter than reference allele
+            # check if match allele is shorter than reference allele
             elif int(b_split_data[6]) < int(b_split_data[5]) - int(b_split_data[5]) * 0.20:
                 classification = "ASM"
             # check if match allele is longer than reference allele
@@ -351,7 +347,7 @@ class AlleleCalling:
             # assign an identification value to the new allele
             if match_allele_schema == "":
                 match_allele_schema = str(
-                    self.inf_alle_obj.get_inferred_allele(b_split_data[14], locus_name)
+                    self.inf_alle_obj.get_inferred_allele(b_split_data[15], locus_name)
                 )
             b_split_data[4] = classification + "_" + match_allele_schema
         return [
