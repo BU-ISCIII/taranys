@@ -308,6 +308,9 @@ class AlleleCalling:
             else:
                 # some of the sequences are different labelled as NIPH
                 classification = "NIPH"
+            # update coding allele type
+            for idx in range(len(b_split_data)):
+                b_split_data[idx][4] = classification
         else:
             b_split_data = _get_blast_details(
                 valid_blast_results[0], locus_name, ref_allele_seq
@@ -349,7 +352,7 @@ class AlleleCalling:
                 match_allele_schema = str(
                     self.inf_alle_obj.get_inferred_allele(b_split_data[14], locus_name)
                 )
-        b_split_data[4] = classification + "_" + match_allele_schema
+            b_split_data[4] = classification + "_" + match_allele_schema
         return [
             classification,
             classification + "_" + match_allele_schema,
@@ -451,29 +454,31 @@ class AlleleCalling:
                 details[2] = locus_name
                 details[4] = "LNF"
                 result["allele_details"][locus_name] = details
-            # prepare the data for snp and alignment analysis
-            try:
-                ref_allele_seq = result["allele_details"][locus_name][16]
-            except KeyError as e:
-                log.error("Error in allele details")
-                log.error(e)
-                stderr.print(f"Error in allele details{e}")
-                continue
-            allele_seq = result["allele_details"][locus_name][15]
-            ref_allele_name = result["allele_details"][locus_name][3]
 
-            if self.snp_request and result["allele_type"][locus_name] != "LNF":
-                # run snp analysis
-                result["snp_data"][locus_name] = taranis.utils.get_snp_information(
-                    ref_allele_seq, allele_seq, ref_allele_name
-                )
-            if self.aligment_request and result["allele_type"][locus_name] != "LNF":
-                # run alignment analysis
-                result["alignment_data"][locus_name] = (
-                    taranis.utils.get_alignment_data(
+            # prepare the data for snp and alignment analysis
+            if result["allele_type"][locus_name] not in ["PLOT", "LNF", "NIPH", "NIPHEM"]:
+                try:
+                    ref_allele_seq = result["allele_details"][locus_name][16]
+                except KeyError as e:
+                    log.error("Error in allele details")
+                    log.error(e)
+                    stderr.print(f"Error in allele details{e}")
+                    continue
+                allele_seq = result["allele_details"][locus_name][15]
+                ref_allele_name = result["allele_details"][locus_name][3]
+
+                if self.snp_request and result["allele_type"][locus_name] != "LNF":
+                    # run snp analysis
+                    result["snp_data"][locus_name] = taranis.utils.get_snp_information(
                         ref_allele_seq, allele_seq, ref_allele_name
                     )
-                )
+                if self.aligment_request and result["allele_type"][locus_name] != "LNF":
+                    # run alignment analysis
+                    result["alignment_data"][locus_name] = (
+                        taranis.utils.get_alignment_data(
+                            ref_allele_seq, allele_seq, ref_allele_name
+                        )
+                    )
         # delete blast folder
         # _ = taranis.utils.delete_folder(os.path.join(self.blast_dir, self.s_name))
         return result
