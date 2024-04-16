@@ -78,16 +78,16 @@ class AlleleCalling:
     def assign_allele_type(
         self,
         valid_blast_results: list,
-        allele_file: str,
-        allele_name: str,
+        locus_file: str,
+        locus_name: str,
         ref_allele_seq: str,
     ) -> list:
         """Assign allele type to the allele
 
         Args:
             valid_blast_results (list): information collected by running blast
-            allele_file (str): file name with allele sequence
-            allele_name (str): allele name
+            locus_file (str): file name with locus alleles sequences
+            locus_name (str): locus name
             ref_allele_seq (str): reference allele sequence
 
         Returns:
@@ -115,20 +115,16 @@ class AlleleCalling:
                 return True
             return False
 
-        def _extend_sequence_for_finding_start_stop_codon(
-            split_blast_result: list,
-            prot_error_result: str,
-            predicted_prot_seq: str,
-            search_codon: str = "stop",
+        def _extend_seq_find_start_stop_codon(
+            direction: str,
+            contig_seq: str,
+            start: int,
+            end: int,
+            limit: int,
+            search: str = "5_prime",
         ) -> list:
-            """Extend match sequence, according the (increase_sequence) for
-                trying find the stop or start codon. When parameter is set to
-                stop additional nucleotides are added to extend the chance to
-                find out the codon stop.
-                If parameter is set to start then additional nucleotide is added
-                on the start value to identify that is a valid start codon. If
-                true then additional nucletotides are added to find the stop codon.
-
+            """Extend match sequence, according to increase_sequence in order to try to
+                find the stop or start codon.
             Args:
                 split_blast_result (list): list having the informaction collected
                     by running blast
@@ -141,129 +137,31 @@ class AlleleCalling:
                 list: updated information if stop or start codon is found and the
                 updated protein sequence and protein conversion result if changed
             """
-            # collect data for checking PLOT
-            data_for_plot = [""] * 10
-            # cop the contig length
-            data_for_plot[7] = split_blast_result[15]
-            # copy start position
-            data_for_plot[8] = split_blast_result[9]
-            # copy end position
-            data_for_plot[9] = split_blast_result[10]
-            # check if PLOT
-            if not _check_if_plot(data_for_plot):
-                # remove the "-" character in the contig sequence in case that
-                # there was not possible to find the start/stop codon and
-                # function return the original blast result
-                split_blast_result[13] = split_blast_result[13].replace("-", "")
-                # fetch the sequence until the last triplet is stop codon
-                contig_seq = self.sample_contigs[split_blast_result[1]]
-                start_seq = int(split_blast_result[9])
-                stop_seq = int(split_blast_result[10])
-                if stop_seq > start_seq:
-                    # sequence direction is forward
-                    direction = "forward"
-                    if search_codon == "start":
-                        # add nucleotides according to the first match in the
-                        # reference allele
-                        start_ref_allele = int(split_blast_result[11]) // 3 * 3
-                        # try extended 1 nucleotide to find the start codon
-                        start_seq_found = False
-                        # subtract 1 because index start at 0
-                        new_start_seq = start_seq - start_ref_allele - 1
-                        for _ in range(1, 3):
-                            new_start_seq -= 1
-                            if (
-                                contig_seq[new_start_seq : new_start_seq + 3]
-                                in taranis.utils.START_CODON_FORWARD
-                            ):
-                                # increase 1 because we substact 1 when searching
-                                # for stop codon
-                                start_seq = new_start_seq + 1
-                                start_seq_found = True
-                                break
-                                # continue to find the stop codon with the new start
-                        if not start_seq_found:
-                            # start codon not found. Return the original blast result
-                            return (
-                                split_blast_result,
-                                prot_error_result,
-                                predicted_prot_seq,
-                            )
+            protein = "-"
+            error = False
+            error_details = "-"
 
-                    # adjust the sequence to be a triplet
-                    interval = (stop_seq - start_seq) // 3 * 3
-                    new_stop_seq = start_seq + interval + self.increase_sequence
-                    start_seq -= 1
-                    # if the increased length is higher than the contig length
-                    # adjust the stop sequence to maximun contig length
-                    # multiply by 3.
-                    if stop_seq > len(contig_seq):
-                        stop_seq = len(contig_seq) // 3 * 3
-                    else:
-                        stop_seq = new_stop_seq - 1
-                    c_sequence = contig_seq[start_seq:stop_seq]
-                else:
-                    # sequence direction is reverse
-                    direction = "reverse"
-                    if search_codon == "start":
-                        if (
-                            contig_seq[start_seq - 2 : start_seq + 1]
-                            in taranis.utils.START_CODON_REVERSE
-                        ):
-                            start_seq += 1
-                            # continue to find the stop codon with the new start
-                        else:
-                            # start codon not found. Return the original blast result
-                            return (
-                                split_blast_result,
-                                prot_error_result,
-                                predicted_prot_seq,
-                            )
-                    # adjust the sequence to be a triplet
-                    interval = (start_seq - stop_seq) // 3 * 3
-                    new_stop_seq = start_seq - interval - self.increase_sequence
-                    # if the increased length is lower than 0 (contig start)
-                    # position, adjust the start sequence to minumum contig
-                    # length multiply by 3
-                    if new_stop_seq < 0:
-                        # get the minimum contig length that is multiple by 3
-                        stop_seq = stop_seq % 3 - 1
-                    else:
-                        stop_seq = new_stop_seq
-                    # get the sequence in reverse
-                    c_sequence = str(
-                        Seq(contig_seq[stop_seq:start_seq]).reverse_complement()
-                    )
-                new_prot_conv_result = taranis.utils.convert_to_protein(
-                    c_sequence, force_coding=False, delete_incompleted_triplet=False
+            # Extend the sequence to find a valid start or stop codon
+            if direction == "reverse":
+                contig_seq = contig_seq.reverse_complement()
+                start, end = len(contig_seq) - end, len(contig_seq) - start
+            import pdb; pdb.set_trace()
+            for i in range(1, limit + 1):
+                if search == "5_prime":
+                    extended_start = max(0, start - i)
+                    extended_end = end
+                elif search == "3_prime":
+                    extended_start = start
+                    extended_end = min(len(contig_seq), end + i)
+
+                extended_seq = contig_seq[extended_start:extended_end]
+                _, protein, error, error_details = taranis.utils.convert_to_protein(
+                    extended_seq, force_coding=True
                 )
-                # check if stop codon is found in protein sequence
+                if not error:
+                    return protein, extended_start, extended_end, error, error_details
 
-                if (
-                    "protein" in new_prot_conv_result
-                    and "*" in new_prot_conv_result["protein"]
-                ):
-                    # increase 3 nucleotides beecause index start at 0
-                    new_seq_length = new_prot_conv_result["protein"].index("*") * 3 + 3
-                    match_sequence = c_sequence[:new_seq_length]
-                    split_blast_result[4] = str(new_seq_length)
-                    split_blast_result[13] = match_sequence
-                    prot_error_result = "-"
-                    predicted_prot_seq = new_prot_conv_result["protein"][
-                        0 : new_seq_length // 3
-                    ]
-                    # update the start and stop position
-                    if direction == "forward":
-                        split_blast_result[10] = str(
-                            int(split_blast_result[9]) + new_seq_length
-                        )
-                    else:
-                        split_blast_result[10] = str(
-                            int(split_blast_result[9]) - new_seq_length
-                        )
-                # ignore the previous process if stop codon is not found
-
-            return split_blast_result, prot_error_result, predicted_prot_seq
+            return protein, start, end, error, error_details
 
         def _get_blast_details(
             blast_result: str, allele_name: str, ref_allele_seq
@@ -308,83 +206,66 @@ class AlleleCalling:
                 product_annotation = "Not found"
                 allele_quality = "Not found"
             if int(split_blast_result[10]) > int(split_blast_result[9]):
-                direction = "+"
+                strand = "+"
             else:
-                direction = "-"
+                strand = "-"
             # remove the gaps in sequences
             match_sequence = split_blast_result[13].replace("-", "")
             # check if the sequence is coding
-            prot_conv_result = taranis.utils.convert_to_protein(
-                match_sequence, force_coding=False, delete_incompleted_triplet=True
+            direction, protein, prot_error, prot_error_details = (
+                taranis.utils.convert_to_protein(match_sequence, force_coding=True)
             )
-            # de lo anterior saco, direccion, proteina, error
-            # prot_error_result = (
-            #     prot_conv_result["error"] if "error" in prot_conv_result else "-"
-            # )
-            # predicted_prot_seq = (
-            #     prot_conv_result["protein"] if "protein" in prot_conv_result else "-"
-            # )
-            # remove if extra nucleotides are added at the end of the last
-            # completed triplet before the stop codon
-            # if "extra nucleotides after stop codon" in prot_error_result:
-            #     new_seq_len = len(match_sequence) // 3 * 3
-            #     match_sequence = match_sequence[:new_seq_len]
-            #     split_blast_result[4] = str(new_seq_len)
-            #     # reset the error message
-            #     prot_error_result = "-"
+            import pdb; pdb.set_trace()
+            start = split_blast_result[9]
+            end = split_blast_result[10]
+            if prot_error:
+                if "is not a stop codon" in prot_error_details:
+                    protein, new_start, new_end, prot_error, prot_error_details = (
+                        _extend_seq_find_start_stop_codon(
+                            direction=direction,
+                            contig_seq=self.sample_contigs[split_blast_result[1]],
+                            start=start,
+                            end=end,
+                            limit=self.increase_sequence,
+                            search="3_prime",
+                        )
+                    )
+                    start = new_start
+                    end = new_end
+                elif "is not a start codon" in prot_error_details:
+                    protein, new_start, new_end, prot_error, prot_error_details = (
+                        _extend_seq_find_start_stop_codon(
+                            direction=direction,
+                            contig_seq=self.sample_contigs[split_blast_result[1]],
+                            start=split_blast_result[9],
+                            end=split_blast_result[10],
+                            limit=self.increase_sequence,
+                            search="5_prime",
+                        )
+                    )
+                    start = new_start
+                    end = new_end
 
-            # extend the sequence to find the stop codon
-            # check como saca esto el translate protein
-            if "not stop codon" in prot_error_result:
-                # le paso start, end, direccion, buscar stop
-                (
-                    split_blast_result,
-                    prot_error_result,
-                    predicted_prot_seq,
-                ) = _extend_sequence_for_finding_start_stop_codon(
-                    split_blast_result,
-                    prot_error_result,
-                    predicted_prot_seq,
-                    search_codon="stop",
-                )
-                # update the match sequence
-                match_sequence = split_blast_result[13]
-            # extend the sequence to find the start codon
-            # check como saca este error el translate protein
-            elif "not start codon" in prot_error_result:
-                # le paso start, end, direccion, buscar start
-                (
-                    split_blast_result,
-                    prot_error_result,
-                    predicted_prot_seq,
-                ) = _extend_sequence_for_finding_start_stop_codon(
-                    split_blast_result,
-                    prot_error_result,
-                    predicted_prot_seq,
-                    search_codon="start",
-                )
-                # update the match sequence
-                match_sequence = split_blast_result[13]
             # get blast details
             blast_details = [
                 self.s_name,  # sample name
                 split_blast_result[1],  # contig name
                 allele_name,  # core gene name
                 split_blast_result[0],  # allele gene
-                "coding",  # coding allele type. To be filled later idx = 4
+                "-",  # coding allele type. To be filled later idx = 4
                 split_blast_result[3],  # reference allele length
                 split_blast_result[4],  # match alignment length
                 split_blast_result[15],  # contig length
-                split_blast_result[9],  # match contig position start
-                split_blast_result[10],  # match contig position end
-                direction,
+                start,  # match contig position start
+                end,  # match contig position end
+                strand,
                 gene_annotation,
                 product_annotation,
                 allele_quality,
-                prot_error_result,  # protein conversion result
+                prot_error_details,  # protein conversion result
                 match_sequence,  # match sequence in contig
                 ref_allele_seq,  # reference allele sequence
-                predicted_prot_seq,  # predicted protein sequence
+                protein,  # predicted protein sequence
             ]
             return blast_details
 
@@ -410,13 +291,14 @@ class AlleleCalling:
         # if len(valid_blast_results) == 0:
         # no match results labelled as LNF. details data filled with empty data
         #    return ["LNF", "LNF", ["-"] * 18]
+        import pdb; pdb.set_trace()
         if len(valid_blast_results) > 1:
             # could  be NIPHEM or NIPH
             b_split_data = []
             match_allele_seq = []
             for valid_blast_result in valid_blast_results:
                 multi_allele_data = _get_blast_details(
-                    valid_blast_result, allele_name, ref_allele_seq
+                    valid_blast_result, locus_name, ref_allele_seq
                 )
                 # get match allele sequence
                 match_allele_seq.append(multi_allele_data[14])
@@ -425,7 +307,7 @@ class AlleleCalling:
                 if match_allele_schema == "":
                     # find the allele in schema with the match sequence in the contig
                     match_allele_schema = _find_match_allele_schema(
-                        allele_file, multi_allele_data[15]
+                        locus_file, multi_allele_data[15]
                     )
             if len(set(match_allele_seq)) == 1:
                 # all sequuences are equal labelled as NIPHEM
@@ -438,11 +320,11 @@ class AlleleCalling:
                 b_split_data[idx][4] = classification + "_" + match_allele_schema
         else:
             b_split_data = _get_blast_details(
-                valid_blast_results[0], allele_name, ref_allele_seq
+                valid_blast_results[0], locus_name, ref_allele_seq
             )
             # found the allele in schema with the match sequence in the contig
             match_allele_schema = _find_match_allele_schema(
-                allele_file, b_split_data[15]
+                locus_file, b_split_data[15]
             )
 
             # PLOT, TPR, ASM, ALM, INF, EXC are possible classifications
@@ -477,7 +359,7 @@ class AlleleCalling:
             # assign an identification value to the new allele
             if match_allele_schema == "":
                 match_allele_schema = str(
-                    self.inf_alle_obj.get_inferred_allele(b_split_data[14], allele_name)
+                    self.inf_alle_obj.get_inferred_allele(b_split_data[14], locus_name)
                 )
         b_split_data[4] = classification + "_" + match_allele_schema
         return [
@@ -508,7 +390,7 @@ class AlleleCalling:
         """
 
         Args:
-            
+
 
         Returns:
             result = {
@@ -518,7 +400,7 @@ class AlleleCalling:
                 "snp_data": {},
                 "alignment_data": {},
             }
-            
+
         """
         result = {
             "allele_type": {},
@@ -566,46 +448,46 @@ class AlleleCalling:
                 # Close object and discard memory buffer
                 query_file.close()
 
-            allele_file = os.path.join(self.schema, os.path.basename(ref_allele))
-            allele_name = Path(allele_file).stem
+            locus_file = os.path.join(self.schema, os.path.basename(ref_allele))
+            locus_name = Path(locus_file).stem
 
             if match_found:
                 (
-                    result["allele_type"][allele_name],
-                    result["allele_match"][allele_name],
-                    result["allele_details"][allele_name],
+                    result["allele_type"][locus_name],
+                    result["allele_match"][locus_name],
+                    result["allele_details"][locus_name],
                 ) = self.assign_allele_type(
-                    valid_blast_results, allele_file, allele_name, r_seq
+                    valid_blast_results, locus_file, locus_name, r_seq
                 )
             else:
                 # Sample does not have a reference allele to be matched
                 # Keep LNF info
-                result["allele_type"][allele_name] = "LNF"
-                result["allele_match"][allele_name] = allele_name
+                result["allele_type"][locus_name] = "LNF"
+                result["allele_match"][locus_name] = locus_name
                 details = ["-"] * 18
                 details[0] = self.s_name
-                details[2] = allele_name
+                details[2] = locus_name
                 details[4] = "LNF"
-                result["allele_details"][allele_name] = details
+                result["allele_details"][locus_name] = details
             # prepare the data for snp and alignment analysis
             try:
-                ref_allele_seq = result["allele_details"][allele_name][16]
+                ref_allele_seq = result["allele_details"][locus_name][16]
             except KeyError as e:
                 log.error("Error in allele details")
                 log.error(e)
                 stderr.print(f"Error in allele details{e}")
                 continue
-            allele_seq = result["allele_details"][allele_name][15]
-            ref_allele_name = result["allele_details"][allele_name][3]
+            allele_seq = result["allele_details"][locus_name][15]
+            ref_allele_name = result["allele_details"][locus_name][3]
 
-            if self.snp_request and result["allele_type"][allele_name] != "LNF":
+            if self.snp_request and result["allele_type"][locus_name] != "LNF":
                 # run snp analysis
-                result["snp_data"][allele_name] = taranis.utils.get_snp_information(
+                result["snp_data"][locus_name] = taranis.utils.get_snp_information(
                     ref_allele_seq, allele_seq, ref_allele_name
                 )
-            if self.aligment_request and result["allele_type"][allele_name] != "LNF":
+            if self.aligment_request and result["allele_type"][locus_name] != "LNF":
                 # run alignment analysis
-                result["alignment_data"][allele_name] = (
+                result["alignment_data"][locus_name] = (
                     taranis.utils.get_alignment_data(
                         ref_allele_seq, allele_seq, ref_allele_name
                     )
