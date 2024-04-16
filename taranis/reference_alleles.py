@@ -246,12 +246,12 @@ def collect_statistics(data_alleles: list, eval_cluster: bool, out_folder: str) 
         cluster, alleles = zip(*cluster_alleles.items())
         _ = taranis.utils.create_graphic(
             graphic_folder,
-            "num_genes_per_allele.png",
+            "num_clusters_per_locus.png",
             "bar",
             cluster,
             alleles,
-            ["Gene", "Number of clusters"],
-            "Number of cluster per gene",
+            ["# clusters", " #locus"],
+            "Clusters per locus",
         )
 
     # split into cluster_data and evaluation_data
