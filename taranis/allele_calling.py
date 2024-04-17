@@ -353,7 +353,7 @@ class AlleleCalling:
                         sample_allele_data["prot_error_details"] = prot_error_details
 
                 elif "is not a start codon" in sample_allele_data["prot_error_details"]:
-                    protein, new_start, new_end, prot_error, prot_error_details = (
+                    protein, extended_seq, new_start, new_end, prot_error, prot_error_details = (
                         _extend_seq_find_start_stop_codon(
                             direction=direction_contig,
                             contig_seq=self.sample_contigs[sample_allele_data["contig_name"]],
