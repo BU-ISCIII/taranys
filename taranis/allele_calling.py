@@ -274,8 +274,8 @@ class AlleleCalling:
                 split_blast_result[3],  # reference allele length
                 split_blast_result[4],  # match alignment length
                 split_blast_result[15],  # contig length
-                start,  # match contig position start
-                end,  # match contig position end
+                str(start),  # match contig position start
+                str(end),  # match contig position end
                 strand,
                 gene_annotation,
                 product_annotation,
@@ -317,7 +317,7 @@ class AlleleCalling:
 
         if len(valid_blast_results) > 1:
             # could  be NIPHEM or NIPH
-            b_split_data = []
+            sample_allele_data = []
             match_allele_seq = []
 
             for valid_blast_result in valid_blast_results:
@@ -326,7 +326,7 @@ class AlleleCalling:
                 )
                 # get match allele sequence
                 match_allele_seq.append(multi_allele_data[14])
-                b_split_data.append(multi_allele_data)
+                sample_allele_data.append(multi_allele_data)
             if len(set(match_allele_seq)) == 1:
                 # all sequuences are equal labelled as NIPHEM
                 classification = "NIPHEM"
@@ -334,36 +334,52 @@ class AlleleCalling:
                 # some of the sequences are different labelled as NIPH
                 classification = "NIPH"
             # update coding allele type
-            for idx in range(len(b_split_data)):
-                b_split_data[idx][4] = classification
+            for idx in range(len(sample_allele_data)):
+                sample_allele_data[idx][4] = classification
+
         else:
-            b_split_data = _get_blast_details(
+            sample_allele_data = _get_blast_details(
                 valid_blast_results[0], locus_name, ref_allele_seq
             )
             # found the allele in schema with the match sequence in the contig
             match_allele_schema = _find_match_allele_schema(
-                locus_file, b_split_data[15]
+                locus_file, sample_allele_data[15]
             )
             # PLOT, TPR, ASM, ALM, INF, EXC are possible classifications
             if match_allele_schema != "":
                 # exact match found labelled as EXC
                 classification = "EXC"
-            elif _check_if_plot(b_split_data):
+                sample_allele_data[4] = classification + "_" + match_allele_schema
+                return [
+                    classification,
+                    classification + "_" + match_allele_schema,
+                    sample_allele_data,
+                ]
+            elif _check_if_plot(sample_allele_data):
                 # match allele is partial length labelled as PLOT
                 classification = "PLOT"
-            # check if protein translation has failed and set to TPR
-            elif b_split_data[14] != "-":
+                sample_allele_data[4] = classification
+                return [
+                    classification,
+                    classification + "_" + match_allele_schema,
+                    sample_allele_data,
+                ]
+
+            # IF PROTEIN ERROR. TRY TO EXTEND
+            # Update sample_allele_data
+
+            if sample_allele_data[14] != "-":
                 classification = "TPR"
             # check if match allele is shorter than reference allele
             elif (
-                int(b_split_data[6])
-                < int(b_split_data[5]) - int(b_split_data[5]) * 0.20
+                int(sample_allele_data[6])
+                < int(sample_allele_data[5]) - int(sample_allele_data[5]) * 0.20
             ):
                 classification = "ASM"
             # check if match allele is longer than reference allele
             elif (
-                int(b_split_data[6])
-                > int(b_split_data[5]) + int(b_split_data[5]) * 0.20
+                int(sample_allele_data[6])
+                > int(sample_allele_data[5]) + int(sample_allele_data[5]) * 0.20
             ):
                 classification = "ALM"
             else:
@@ -372,13 +388,14 @@ class AlleleCalling:
             # assign an identification value to the new allele
             if match_allele_schema == "":
                 match_allele_schema = str(
-                    self.inf_alle_obj.get_inferred_allele(b_split_data[15], locus_name)
+                    self.inf_alle_obj.get_inferred_allele(sample_allele_data[15], locus_name)
                 )
-            b_split_data[4] = classification + "_" + match_allele_schema
+            sample_allele_data[4] = classification + "_" + match_allele_schema
+
         return [
             classification,
             classification + "_" + match_allele_schema,
-            b_split_data,
+            sample_allele_data,
         ]
 
     def discard_low_threshold_results(self, blast_results: list) -> list:
@@ -470,7 +487,7 @@ class AlleleCalling:
                 # Sample does not have a reference allele to be matched
                 # Keep LNF info
                 result["allele_type"][locus_name] = "LNF"
-                result["allele_match"][locus_name] = locus_name
+                result["allele_match"][locus_name] = "LNF"
                 details = ["-"] * 18
                 details[0] = self.s_name
                 details[2] = locus_name
@@ -691,6 +708,7 @@ def collect_data(
     # get allele list
     first_sample = list(results[0].keys())[0]
     allele_list = sorted(results[0][first_sample]["allele_type"].keys())
+
     for result in results:
         for sample, values in result.items():
             sum_allele_type = OrderedDict()  # used for summary file
@@ -734,6 +752,7 @@ def collect_data(
                         for detail in detail_value:
                             fo.write(",".join(detail) + "\n")
                     else:
+                        import pdb; pdb.set_trace()
                         fo.write(",".join(detail_value) + "\n")
     # save snp to file if requested
     if snp_request:
