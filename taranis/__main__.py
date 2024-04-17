@@ -517,7 +517,6 @@ def allele_calling(
     if not force:
         _ = taranis.utils.prompt_user_if_folder_exists(output)
     # Filter fasta files from reference folder
-    # ref_alleles = glob.glob(os.path.join(reference, "*.fasta"))
     max_cpus = taranis.utils.cpus_available()
     if cpus > max_cpus:
         stderr.print("[red] Number of CPUs bigger than the CPUs available")
@@ -563,32 +562,13 @@ def allele_calling(
             except Exception as e:
                 print(e)
                 continue
-    """
-    for assembly_file in assemblies:
-        results.append(
-            taranis.allele_calling.parallel_execution(
-                assembly_file,
-                schema,
-                prediction_data,
-                schema_ref_files,
-                threshold,
-                perc_identity,
-                output,
-                inf_allele_obj,
-                snp,
-                alignment,
-                proteine_threshold,
-                increase_sequence,
-            )
-        )
-    """
+
     _ = taranis.allele_calling.collect_data(
         results, output, snp, alignment, schema_ref_files, cpus
     )
     finish = time.perf_counter()
     print(f"Allele calling finish in {round((finish-start)/60, 2)} minutes")
     log.info("Allele calling finish in %s minutes", round((finish - start) / 60, 2))
-    # sample_allele_obj.analyze_sample()
 
 
 @taranis_cli.command(help_priority=3)

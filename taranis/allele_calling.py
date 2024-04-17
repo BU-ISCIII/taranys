@@ -95,22 +95,22 @@ class AlleleCalling:
             details
         """
 
-        def _check_if_plot(column_blast_res: list) -> bool:
+        def _check_plot(allele_details: dict) -> bool:
             """Check if allele is partial length
 
             Args:
-                column_blast_res (list): blast result
+                allele_details (dirt): allele details obtained with _get_allele_details() function. 
 
             Returns:
-                bool: True if allele is partial length
+                bool: True if alignment is partial due to end of contig
             """
             if (
-                column_blast_res[8] == "1"  # check  at contig start
+                allele_details["align_contig_start"] == "1"  # check  at contig start
                 # check if contig ends is the same as match allele ends
-                or column_blast_res[9] == column_blast_res[7]
-                or column_blast_res[9] == "1"  # check reverse at contig end
+                or allele_details["align_contig_end"] == allele_details["contig_length"]
+                or allele_details["align_contig_end"] == "1"  # check reverse at contig end
                 # check if contig start is the same as match allele start reverse
-                or column_blast_res[8] == column_blast_res[7]
+                or allele_details["align_contig_start"] == allele_details["contig_length"]
             ):
                 return True
             return False
@@ -126,16 +126,9 @@ class AlleleCalling:
             """Extend match sequence, according to increase_sequence in order to try to
                 find the stop or start codon.
             Args:
-                split_blast_result (list): list having the informaction collected
-                    by running blast
-                prot_error_result (str): protein conversion result
-                predicted_prot_seq (str): predicted protein sequence
-                search_codon (str, optional): codon to be found. 2 values are
-                    allowed start of stop. By default is stop.
 
             Returns:
-                list: updated information if stop or start codon is found and the
-                updated protein sequence and protein conversion result if changed
+
             """
             protein = "-"
             error = False
@@ -160,43 +153,47 @@ class AlleleCalling:
                     extended_seq, force_coding=True
                 )
                 if not error:
-                    return protein, extended_start, extended_end, error, error_details
+                    return protein, extended_seq, extended_start, extended_end, error, error_details
 
-            return protein, start, end, error, error_details
+            return protein, contig_seq[start:end], start, end, error, error_details
 
-        def _get_blast_details(
-            blast_result: str, allele_name: str, ref_allele_seq
-        ) -> list:
-            """Collect blast details and modify the order of the columns
+        def _get_allele_details(
+            blast_result: str, locus_name: str, ref_allele_seq
+        ) -> dict:
+            """Collect blast details, add gene annotation, and protein sequence.
 
             Args:
                 blast_result (str): information collected by running blast
-                allele_name (str):  allele name
+                locus_name (str):  allele name
+                ref_allele_seq (str): reference allele sequence
 
             Returns:
-                list: containing allele details in the correct order to be saved
-                    blast_details[0] = sample name
-                    blast_details[1] = contig name
-                    blast_details[2] = core gene name
-                    blast_details[3] = allele gene
-                    blast_details[4] = coding allele type
-                    blast_details[5] = reference allele length
-                    blast_details[6] = match alignment length
-                    blast_details[7] = contig length
-                    blast_details[8] = match contig position start
-                    blast_details[9] = match contig position end
-                    blast_details[10] = direction
-                    blast_details[11] = gene annotation
-                    blast_details[12] = product annotation
-                    blast_details[13] = allele quality
-                    blast_details[14] = protein conversion result
-                    blast_details[15] = match sequence in contig
-                    blast_details[16] = reference allele sequence
-                    blast_details[17] = predicted protein sequence
+                dict:
+                allele_details{
+                        "sample_name": str,
+                        "contig_name": str,
+                        "locus_name": str,
+                        "ref_allele_name": str,
+                        "allele_type": str,
+                        "ref_allele_length": str,
+                        "alignment_length": str,
+                        "contig_length": str,
+                        "align_contig_start": str,
+                        "align_contig_end": str,
+                        "strand": str,
+                        "sample_allele_seq": str,
+                        "ref_allele_seq": str,
+                        "gene_annotation": str,
+                        "product_annot": str,
+                        "ref_allele_quality": str,
+                        "protein_seq": str,
+                        "prot_strand": str,
+                        "prot_error": bool,
+                        "prot_error_details": str,
+                    }
             """
             split_blast_result = blast_result.split("\t")
             match_allele_name = split_blast_result[0]
-
             try:
                 gene_annotation = self.prediction_data[match_allele_name]["gene"]
                 product_annotation = self.prediction_data[match_allele_name]["product"]
@@ -219,75 +216,32 @@ class AlleleCalling:
             direction, protein, prot_error, prot_error_details = (
                 taranis.utils.convert_to_protein(match_sequence, force_coding=True)
             )
-
-            # 0/1-based
-            if strand == "+":
-                start = int(split_blast_result[9]) - 1
-                end = int(split_blast_result[10])
-            else:
-                start = int(split_blast_result[10]) - 1
-                end = int(split_blast_result[9])
-
-            if prot_error:
-                # If strand "-" contig seq is reverse complemented but match sequence (split_blast_result[13])
-                # is forward, so we need to change the contig seq to reverse_complement accordingly
-                if strand == "-" and direction == "reverse":
-                    direction_contig = "forward"
-                elif strand == "-" and direction == "forward":
-                    direction_contig = "reverse"
-                else:
-                    direction_contig = direction
-
-                if "is not a stop codon" in prot_error_details:
-                    protein, new_start, new_end, prot_error, prot_error_details = (
-                        _extend_seq_find_start_stop_codon(
-                            direction=direction_contig,
-                            contig_seq=self.sample_contigs[split_blast_result[1]],
-                            start=start,
-                            end=end,
-                            limit=self.increase_sequence,
-                            search="3_prime",
-                        )
-                    )
-                    start = new_start
-                    end = new_end
-                elif "is not a start codon" in prot_error_details:
-                    protein, new_start, new_end, prot_error, prot_error_details = (
-                        _extend_seq_find_start_stop_codon(
-                            direction=direction,
-                            contig_seq=self.sample_contigs[split_blast_result[1]],
-                            start=start,
-                            end=end,
-                            limit=self.increase_sequence,
-                            search="5_prime",
-                        )
-                    )
-                    start = new_start
-                    end = new_end
             # get blast details
-            blast_details = [
-                self.s_name,  # sample name
-                split_blast_result[1],  # contig name
-                allele_name,  # core gene name
-                split_blast_result[0],  # allele gene
-                "-",  # coding allele type. To be filled later idx = 4
-                split_blast_result[3],  # reference allele length
-                split_blast_result[4],  # match alignment length
-                split_blast_result[15],  # contig length
-                str(start),  # match contig position start
-                str(end),  # match contig position end
-                strand,
-                gene_annotation,
-                product_annotation,
-                allele_quality,
-                prot_error_details,  # protein conversion result
-                match_sequence,  # match sequence in contig
-                ref_allele_seq,  # reference allele sequence
-                protein,  # predicted protein sequence
-            ]
-            return blast_details
+            allele_details = OrderedDict({
+                "sample_name": self.s_name,  # sample name
+                "locus_name": locus_name,  # core gene name
+                "allele_type": "-",
+                "ref_allele_name": split_blast_result[0],
+                "contig_name": split_blast_result[1],  # contig name
+                "contig_length": split_blast_result[15],
+                "ref_allele_length": split_blast_result[3],
+                "alignment_length": split_blast_result[4],
+                "align_contig_start": split_blast_result[9],
+                "align_contig_end": split_blast_result[10],
+                "strand": strand,
+                "sample_allele_seq": match_sequence,
+                "ref_allele_seq": ref_allele_seq,
+                "gene_annotation": gene_annotation,
+                "product_annot": product_annotation,
+                "ref_allele_quality": allele_quality,
+                "protein_seq": protein,
+                "prot_strand": direction,
+                "prot_error": prot_error,
+                "prot_error_details": prot_error_details,
+            })
+            return allele_details
 
-        def _find_match_allele_schema(allele_file: str, match_sequence: str) -> str:
+        def _classify_allele(allele_file: str, match_sequence: str) -> str:
             """Find the allele name in the schema that match the sequence
 
             Args:
@@ -307,13 +261,9 @@ class AlleleCalling:
             if match_sequence in sequence_dict:
                 return sequence_dict[match_sequence]
 
-            return ""  # Return an empty string if no match is found
+            return False  # Return an empty string if no match is found
 
-        # valid_blast_results = _discard_low_threshold_results(blast_results)
         match_allele_schema = ""
-        # if len(valid_blast_results) == 0:
-        # no match results labelled as LNF. details data filled with empty data
-        #    return ["LNF", "LNF", ["-"] * 18]
 
         if len(valid_blast_results) > 1:
             # could  be NIPHEM or NIPH
@@ -321,11 +271,11 @@ class AlleleCalling:
             match_allele_seq = []
 
             for valid_blast_result in valid_blast_results:
-                multi_allele_data = _get_blast_details(
+                multi_allele_data = _get_allele_details(
                     valid_blast_result, locus_name, ref_allele_seq
                 )
                 # get match allele sequence
-                match_allele_seq.append(multi_allele_data[14])
+                match_allele_seq.append(multi_allele_data["sample_allele_seq"])
                 sample_allele_data.append(multi_allele_data)
             if len(set(match_allele_seq)) == 1:
                 # all sequuences are equal labelled as NIPHEM
@@ -335,62 +285,116 @@ class AlleleCalling:
                 classification = "NIPH"
             # update coding allele type
             for idx in range(len(sample_allele_data)):
-                sample_allele_data[idx][4] = classification
+                sample_allele_data[idx]["allele_type"] = classification
 
         else:
-            sample_allele_data = _get_blast_details(
+            sample_allele_data = _get_allele_details(
                 valid_blast_results[0], locus_name, ref_allele_seq
             )
             # found the allele in schema with the match sequence in the contig
-            match_allele_schema = _find_match_allele_schema(
-                locus_file, sample_allele_data[15]
+            match_allele_schema = _classify_allele(
+                locus_file, sample_allele_data["sample_allele_seq"]
             )
             # PLOT, TPR, ASM, ALM, INF, EXC are possible classifications
-            if match_allele_schema != "":
+            if match_allele_schema:
                 # exact match found labelled as EXC
                 classification = "EXC"
-                sample_allele_data[4] = classification + "_" + match_allele_schema
+                sample_allele_data["allele_type"] = classification + "_" + match_allele_schema
                 return [
                     classification,
                     classification + "_" + match_allele_schema,
                     sample_allele_data,
                 ]
-            elif _check_if_plot(sample_allele_data):
+            elif _check_plot(sample_allele_data):
                 # match allele is partial length labelled as PLOT
                 classification = "PLOT"
-                sample_allele_data[4] = classification
+                sample_allele_data["allele_type"] = classification
                 return [
                     classification,
-                    classification + "_" + match_allele_schema,
+                    classification,
                     sample_allele_data,
                 ]
 
-            # IF PROTEIN ERROR. TRY TO EXTEND
-            # Update sample_allele_data
+            if sample_allele_data["prot_error"]:
+                # 0/1-based
+                if sample_allele_data["strand"] == "+":
+                    start = int(sample_allele_data["align_contig_start"]) - 1
+                    end = int(sample_allele_data["align_contig_end"])
+                else:
+                    start = int(sample_allele_data["align_contig_end"]) - 1
+                    end = int(sample_allele_data["align_contig_start"])
 
-            if sample_allele_data[14] != "-":
+                # If strand "-" contig seq is reverse complemented but match sequence (split_blast_result[13])
+                # is forward, so we need to change the contig seq to reverse_complement accordingly
+                if sample_allele_data["strand"] == "-" and sample_allele_data["prot_strand"] == "reverse":
+                    direction_contig = "forward"
+                elif sample_allele_data["strand"] == "-" and sample_allele_data["prot_strand"] == "forward":
+                    direction_contig = "reverse"
+                else:
+                    direction_contig = sample_allele_data["prot_strand"]
+
+                if "is not a stop codon" in sample_allele_data["prot_error_details"]:
+                    protein, extended_seq, new_start, new_end, prot_error, prot_error_details = (
+                        _extend_seq_find_start_stop_codon(
+                            direction=direction_contig,
+                            contig_seq=self.sample_contigs[sample_allele_data["contig_name"]],
+                            start=start,
+                            end=end,
+                            limit=self.increase_sequence,
+                            search="3_prime",
+                        )
+                    )
+                    if not prot_error:
+                        sample_allele_data["protein_seq"] = protein
+                        sample_allele_data["sample_allele_seq"] = extended_seq
+                        sample_allele_data["align_contig_start"] = new_start
+                        sample_allele_data["align_contig_end"] = new_end
+                        sample_allele_data["prot_error"] = prot_error
+                        sample_allele_data["prot_error_details"] = prot_error_details
+
+                elif "is not a start codon" in sample_allele_data["prot_error_details"]:
+                    protein, new_start, new_end, prot_error, prot_error_details = (
+                        _extend_seq_find_start_stop_codon(
+                            direction=direction_contig,
+                            contig_seq=self.sample_contigs[sample_allele_data["contig_name"]],
+                            start=start,
+                            end=end,
+                            limit=self.increase_sequence,
+                            search="5_prime",
+                        )
+                    )
+                    if not prot_error:
+                        sample_allele_data["protein_seq"] = protein
+                        sample_allele_data["sample_allele_seq"] = extended_seq
+                        sample_allele_data["align_contig_start"] = new_start
+                        sample_allele_data["align_contig_end"] = new_end
+                        sample_allele_data["prot_error"] = prot_error
+                        sample_allele_data["prot_error_details"] = prot_error_details
+
+            if sample_allele_data["prot_error"]:
                 classification = "TPR"
             # check if match allele is shorter than reference allele
             elif (
-                int(sample_allele_data[6])
-                < int(sample_allele_data[5]) - int(sample_allele_data[5]) * 0.20
+                int(len(sample_allele_data["sample_allele_seq"]))
+                < int(sample_allele_data["ref_allele_length"]) - int(sample_allele_data["ref_allele_length"]) * 0.20
             ):
                 classification = "ASM"
             # check if match allele is longer than reference allele
             elif (
-                int(sample_allele_data[6])
-                > int(sample_allele_data[5]) + int(sample_allele_data[5]) * 0.20
+                int(len(sample_allele_data["sample_allele_seq"]))
+                > int(sample_allele_data["ref_allele_length"]) + int(sample_allele_data["ref_allele_length"]) * 0.20
             ):
                 classification = "ALM"
             else:
                 # if sequence was not found after running grep labelled as INF
                 classification = "INF"
             # assign an identification value to the new allele
-            if match_allele_schema == "":
+            if not match_allele_schema:
                 match_allele_schema = str(
-                    self.inf_alle_obj.get_inferred_allele(sample_allele_data[15], locus_name)
+                    self.inf_alle_obj.get_inferred_allele(sample_allele_data["sample_allele_seq"], locus_name)
                 )
-            sample_allele_data[4] = classification + "_" + match_allele_schema
+
+            sample_allele_data["allele_type"] = classification + "_" + match_allele_schema
 
         return [
             classification,
@@ -416,11 +420,11 @@ class AlleleCalling:
                 valid_blast_result.append(b_result)
         return valid_blast_result
 
-    def search_match_allele(self):
-        """
+    def search_allele(self):
+        """ Search reference allele in contig files and classify
 
         Args:
-
+            self
 
         Returns:
             result = {
@@ -430,7 +434,6 @@ class AlleleCalling:
                 "snp_data": {},
                 "alignment_data": {},
             }
-
         """
         result = {
             "allele_type": {},
@@ -472,6 +475,7 @@ class AlleleCalling:
                         break
                 # Close object and discard memory buffer
                 query_file.close()
+
             locus_file = os.path.join(self.schema, os.path.basename(ref_allele))
             locus_name = Path(locus_file).stem
 
@@ -488,10 +492,10 @@ class AlleleCalling:
                 # Keep LNF info
                 result["allele_type"][locus_name] = "LNF"
                 result["allele_match"][locus_name] = "LNF"
-                details = ["-"] * 18
-                details[0] = self.s_name
-                details[2] = locus_name
-                details[4] = "LNF"
+                details = OrderedDict()
+                details["sample_name"] = self.s_name
+                details["locus_name"] = locus_name
+                details["allele_type"] = "LNF"
                 result["allele_details"][locus_name] = details
 
             # prepare the data for snp and alignment analysis
@@ -502,20 +506,22 @@ class AlleleCalling:
                 "NIPHEM",
             ]:
                 try:
-                    ref_allele_seq = result["allele_details"][locus_name][16]
+                    ref_allele_seq = result["allele_details"][locus_name]["ref_allele_seq"]
                 except KeyError as e:
                     log.error("Error in allele details")
                     log.error(e)
                     stderr.print(f"Error in allele details{e}")
                     continue
-                allele_seq = result["allele_details"][locus_name][15]
-                ref_allele_name = result["allele_details"][locus_name][3]
+
+                allele_seq = result["allele_details"][locus_name]["sample_allele_seq"]
+                ref_allele_name = result["allele_details"][locus_name]["ref_allele_name"]
 
                 if self.snp_request and result["allele_type"][locus_name] != "LNF":
                     # run snp analysis
                     result["snp_data"][locus_name] = taranis.utils.get_snp_information(
                         ref_allele_seq, allele_seq, ref_allele_name
                     )
+
                 if self.aligment_request and result["allele_type"][locus_name] != "LNF":
                     # run alignment analysis
                     result["alignment_data"][locus_name] = (
@@ -524,7 +530,7 @@ class AlleleCalling:
                         )
                     )
         # delete blast folder
-        # _ = taranis.utils.delete_folder(os.path.join(self.blast_dir, self.s_name))
+        _ = taranis.utils.delete_folder(os.path.join(self.blast_dir, self.s_name))
         return result
 
 
@@ -559,7 +565,7 @@ def parallel_execution(
     sample_name = Path(sample_file).stem
     stderr.print(f"[green] Analyzing sample {sample_name}")
     log.info(f"Analyzing sample {sample_name}")
-    return {sample_name: allele_obj.search_match_allele()}
+    return {sample_name: allele_obj.search_allele()}
 
 
 def create_multiple_alignment(
@@ -678,36 +684,37 @@ def collect_data(
         return ref_alleles_data
 
     summary_result_file = os.path.join(output, "allele_calling_summary.csv")
-    sample_allele_match_file = os.path.join(output, "allele_calling_match.csv")
-    sample_allele_detail_file = os.path.join(output, "matching_contig.csv")
+    allele_matrix_file = os.path.join(output, "allele_calling_match.csv")
+    allele_detail_file = os.path.join(output, "contig_alignment_info.csv")
     allele_types = ["NIPHEM", "NIPH", "EXC", "PLOT", "ASM", "ALM", "INF", "LNF", "TPR"]
-    detail_heading = [
-        "sample",
-        "contig",
-        "core gene",
-        "reference allele name",
-        "codification",
-        "query length",
-        "match length",
-        "contig length",
-        "contig start",
-        "contig stop",
-        "direction",
-        "gene notation",
-        "product notation",
-        "reference allele quality",
-        "protein conversion result",
-        "match sequence",
-        "reference allele sequence",
-        "predicted protein sequence",
+    allele_detail_heading = [
+        "sample_name",
+        "locus_name",
+        "allele_type",
+        "ref_allele_name",
+        "contig_name",
+        "contig_length",
+        "ref_allele_length",
+        "alignment_length",
+        "align_contig_start",
+        "align_contig_end",
+        "strand",
+        "sample_allele_seq",
+        "ref_allele_seq",
+        "gene_annotation",
+        "product_annot",
+        "ref_allele_quality",
+        "protein_seq",
+        "prot_strand",
+        "prot_error",
+        "prot_error_details",
     ]
 
     summary_result = {}  # used for summary file and allele classification graphics
-    sample_allele_match = {}  # used for allele match file
+    allele_matrix_result = {}  # used for allele match file
 
     # get allele list
-    first_sample = list(results[0].keys())[0]
-    allele_list = sorted(results[0][first_sample]["allele_type"].keys())
+    locus_list = [Path(ref_allele).stem for ref_allele in ref_alleles]
 
     for result in results:
         for sample, values in result.items():
@@ -720,11 +727,10 @@ def collect_data(
                 sum_allele_type[type_of_allele] += 1
                 # add allele name match to sample
                 allele_match[allele] = (
-                    # type_of_allele + "_" + values["allele_match"][allele]
                     values["allele_match"][allele]
                 )
             summary_result[sample] = sum_allele_type
-            sample_allele_match[sample] = allele_match
+            allele_matrix_result[sample] = allele_match
 
     # save summary results to file
     with open(summary_result_file, "w") as fo:
@@ -734,26 +740,29 @@ def collect_data(
             for _, count in counts.items():
                 fo.write(f"{count},")
             fo.write("\n")
+
     # save allele match to file
-    with open(sample_allele_match_file, "w") as fo:
-        fo.write("Sample," + ",".join(allele_list) + "\n")
-        for sample, allele_cod in sample_allele_match.items():
+    with open(allele_matrix_file, "w") as fo:
+        fo.write("Sample," + ",".join(locus_list) + "\n")
+        for sample, allele_cod in allele_matrix_result.items():
             fo.write(f"{sample}")
-            for allele in allele_list:
+            for allele in locus_list:
                 fo.write(f",{allele_cod[allele]}")
             fo.write("\n")
 
-    with open(sample_allele_detail_file, "w") as fo:
-        fo.write(",".join(detail_heading) + "\n")
+    with open(allele_detail_file, "w") as fo:
+        fo.write(",".join(allele_detail_heading) + "\n")
         for result in results:
             for sample, values in result.items():
                 for allele, detail_value in values["allele_details"].items():
-                    if type(detail_value[0]) is list:
+                    if type(detail_value) is list:
                         for detail in detail_value:
-                            fo.write(",".join(detail) + "\n")
+                            if detail["allele_type"] != "LNF":
+                                fo.write(",".join([str(value) for value in detail.values()]) + "\n")
                     else:
-                        import pdb; pdb.set_trace()
-                        fo.write(",".join(detail_value) + "\n")
+                        if detail_value["allele_type"] != "LNF":
+                            fo.write(",".join([str(value) for value in detail_value.values()]) + "\n")
+
     # save snp to file if requested
     if snp_request:
         for result in results:
@@ -817,7 +826,7 @@ def collect_data(
                     alignment_folder,
                     mafft_cpus,
                 )
-                for a_list in allele_list
+                for a_list in locus_list
             ]
         for future in concurrent.futures.as_completed(futures):
             try:
