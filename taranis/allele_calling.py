@@ -371,6 +371,18 @@ class AlleleCalling:
                         sample_allele_data["prot_error"] = prot_error
                         sample_allele_data["prot_error_details"] = prot_error_details
 
+            match_allele_schema = _classify_allele(
+                locus_file, sample_allele_data["sample_allele_seq"]
+            )
+            if match_allele_schema:
+                # exact match found labelled as EXC
+                classification = "EXC"
+                sample_allele_data["allele_type"] = classification + "_" + match_allele_schema
+                return [
+                    classification,
+                    classification + "_" + match_allele_schema,
+                    sample_allele_data,
+                ]
             if sample_allele_data["prot_error"]:
                 classification = "TPR"
             # check if match allele is shorter than reference allele
@@ -714,7 +726,7 @@ def collect_data(
     allele_matrix_result = {}  # used for allele match file
 
     # get allele list
-    locus_list = [Path(ref_allele).stem for ref_allele in ref_alleles]
+    locus_list = [Path(ref_allele).stem for ref_allele in ref_alleles].sort()
 
     for result in results:
         for sample, values in result.items():
