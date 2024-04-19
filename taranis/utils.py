@@ -69,6 +69,14 @@ POSIBLE_BAD_QUALITY = [
 ]
 
 
+def has_start_codon(seq):
+    return seq[:3] in START_CODON_FORWARD or seq[-3:] in START_CODON_REVERSE
+
+
+def has_stop_codon(seq):
+    return seq[:3] in STOP_CODON_FORWARD or seq[-3:] in STOP_CODON_REVERSE
+
+
 def cpus_available() -> int:
     """Get the number of cpus available in the system
 
