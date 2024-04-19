@@ -70,10 +70,20 @@ POSIBLE_BAD_QUALITY = [
 
 
 def has_start_codon(seq):
+    """ Checks whether the sequence has a start codon
+
+    Returns:
+        bool
+    """
     return seq[:3] in START_CODON_FORWARD or seq[-3:] in START_CODON_REVERSE
 
 
 def has_stop_codon(seq):
+    """ Checks whether the sequence has a stop codon
+
+    Returns:
+        bool
+    """
     return seq[:3] in STOP_CODON_FORWARD or seq[-3:] in STOP_CODON_REVERSE
 
 
@@ -87,7 +97,13 @@ def cpus_available() -> int:
 
 
 def get_seq_direction(allele_sequence):
-    # check direction
+    """ Get sequence direction
+
+    Returns:
+        "forward" if found a start or stop codon in forward
+        "reverse" if found start or stop codon in reverse
+        "both" if none of those are found, could be either strands
+    """
     if (
         allele_sequence[0:3] in START_CODON_FORWARD
         or allele_sequence[-3:] in STOP_CODON_FORWARD

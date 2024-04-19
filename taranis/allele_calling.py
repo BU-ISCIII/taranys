@@ -128,7 +128,12 @@ class AlleleCalling:
             """Extend match sequence, according to increase_sequence in order to try to
                 find the stop or start codon.
             Args:
-
+                direction (str): forward or reverse
+                contig_seq (str): contig sequence
+                start (int): alignment start
+                end (int): alignment end
+                limit (int): nt limit for increasing the sequence in order to find start/stop codon
+                search (str): 5_prime/3_prime, search upstream or downstream
             Returns:
 
             """
@@ -276,14 +281,16 @@ class AlleleCalling:
             return False  # Return an empty string if no match is found
 
         def _adjust_position(search, adjustment, start, end):
-            """Adjust contig alignment positions
+            """Adjust start/end alignment positions
 
             Args:
                 search (str): 5_prime or 3_prime, add nucleotides upstream or downstream
-                data (dict): dictionary with sample_allele_details
+                start (int): start position
+                end (int): end position
 
             Returns:
-                data (dict) modifies input dict with contig position adjustments
+                start (int) start position adjusted
+                end (int) end position adjusted
             """
             if search == "5_prime":
                 start -= adjustment
@@ -660,21 +667,19 @@ def parallel_execution(
 
 
 def create_multiple_alignment(
-    ref_alleles_seq: dict, results: list, a_list: str, alignment_folder: str, mafft_cpus
+    ref_alleles_seq: dict, results: list, locus: str, alignment_folder: str, mafft_cpus: int
 ) -> None:
-    """Collect data for the allele calling analysis, done for each sample and
-    create the summary file, graphics, and if requested snp and alignment files
+    """Create multiple alignmet file for each locus
 
     Args:
-        results (list): list of allele calling data results for each sample
-        output (str): output folder
-        snp_request (bool): request to save snp to file
-        aligment_request (bool): request to save alignment and multi alignemte to file
-        ref_alleles (list): reference alleles
-        cpus (int): number of cpus to be used if alignment is requested
+        ref_alleles_seq (list): list of reference allele sequences
+        results (dict): dict with allele calling results
+        locus (str): locus name to make the alignment for
+        alignment_folder (str): output folder
+        mafft_cpus (list): number of cpus for mafft parallelization
     """
     allele_multiple_align = []
-    for ref_id, ref_seq in ref_alleles_seq[a_list].items():
+    for ref_id, ref_seq in ref_alleles_seq[locus].items():
         input_buffer = StringIO()
         # get the reference allele sequence
         input_buffer.write(">Ref_" + ref_id + "\n")
@@ -683,21 +688,20 @@ def create_multiple_alignment(
         for result in results:
             for sample, values in result.items():
                 # discard the allele if it is LNF
-                if values["allele_type"][a_list] == "LNF":
+                if values["allele_type"][locus] == "LNF":
                     continue
                 # get the allele name in sample
                 input_buffer.write(
                     ">"
                     + sample
                     + "_"
-                    + a_list
+                    + locus
                     + "_"
-                    + values["allele_details"][a_list][4]
+                    + values["allele_details"][locus]["allele_type"]
                     + "\n"
                 )
                 # get the sequence of the allele in sample
-                input_buffer.write(values["allele_details"][a_list][15] + "\n")
-        # print(input_buffer.tell())
+                input_buffer.write(values["allele_details"][locus]["sample_allele_seq"] + "\n")
         input_buffer.seek(0)
 
         allele_multiple_align.append(
@@ -707,7 +711,7 @@ def create_multiple_alignment(
         input_buffer.close()
     # save multiple alignment to file
     with open(
-        os.path.join(alignment_folder, a_list + "_multiple_alignment.aln"), "w"
+        os.path.join(alignment_folder, locus + "_multiple_alignment.aln"), "w"
     ) as fo:
         for alignment in allele_multiple_align:
             for align in alignment:
@@ -930,11 +934,11 @@ def collect_data(
                     create_multiple_alignment,
                     ref_alleles_seq,
                     results,
-                    a_list,
+                    locus,
                     alignment_folder,
                     mafft_cpus,
                 )
-                for a_list in locus_list
+                for locus in locus_list
             ]
         for future in concurrent.futures.as_completed(futures):
             try:
@@ -942,9 +946,6 @@ def collect_data(
             except Exception as e:
                 print(e)
                 continue
-
-        # for a_list in allele_list:
-        #     _ = create_multiple_alignment(ref_alleles_seq, results, a_list, alignment_folder)
 
     # Create graphics
     stats_graphics(output, summary_result)
