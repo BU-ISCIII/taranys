@@ -667,7 +667,11 @@ def parallel_execution(
 
 
 def create_multiple_alignment(
-    ref_alleles_seq: dict, results: list, locus: str, alignment_folder: str, mafft_cpus: int
+    ref_alleles_seq: dict,
+    results: list,
+    locus: str,
+    alignment_folder: str,
+    mafft_cpus: int,
 ) -> None:
     """Create multiple alignmet file for each locus
 
@@ -701,7 +705,9 @@ def create_multiple_alignment(
                     + "\n"
                 )
                 # get the sequence of the allele in sample
-                input_buffer.write(values["allele_details"][locus]["sample_allele_seq"] + "\n")
+                input_buffer.write(
+                    values["allele_details"][locus]["sample_allele_seq"] + "\n"
+                )
         input_buffer.seek(0)
 
         allele_multiple_align.append(
