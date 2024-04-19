@@ -258,7 +258,7 @@ class AlleleCalling:
             )
             return allele_details
 
-        def _classify_allele(allele_file: str, match_sequence: str) -> str:
+        def _classify_allele(locus_file: str, match_sequence: str) -> str:
             """Find the allele name in the schema that match the sequence
 
             Args:
@@ -271,7 +271,7 @@ class AlleleCalling:
             # Read the fasta file and create a dictionary mapping sequences to their record IDs
             sequence_dict = {
                 str(record.seq): record.id
-                for record in SeqIO.parse(allele_file, "fasta")
+                for record in SeqIO.parse(locus_file, "fasta")
             }
 
             # Check if the match_sequence is in the dictionary and return the corresponding record ID part
@@ -417,6 +417,7 @@ class AlleleCalling:
             match_allele_schema = _classify_allele(
                 locus_file, sample_allele_data["sample_allele_seq"]
             )
+
             # PLOT, TPR, ASM, ALM, INF, EXC are possible classifications
             if match_allele_schema:
                 # exact match found labelled as EXC
