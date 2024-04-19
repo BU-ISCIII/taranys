@@ -70,7 +70,7 @@ POSIBLE_BAD_QUALITY = [
 
 
 def has_start_codon(seq):
-    """ Checks whether the sequence has a start codon
+    """Checks whether the sequence has a start codon
 
     Returns:
         bool
@@ -79,7 +79,7 @@ def has_start_codon(seq):
 
 
 def has_stop_codon(seq):
-    """ Checks whether the sequence has a stop codon
+    """Checks whether the sequence has a stop codon
 
     Returns:
         bool
@@ -97,7 +97,7 @@ def cpus_available() -> int:
 
 
 def get_seq_direction(allele_sequence):
-    """ Get sequence direction
+    """Get sequence direction
 
     Returns:
         "forward" if found a start or stop codon in forward
