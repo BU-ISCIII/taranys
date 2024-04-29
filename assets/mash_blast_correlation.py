@@ -13,7 +13,7 @@ import scipy
 
 def fill_triangle_matrix(mash_tabpath):
     with open(mash_tabpath, "r") as file:
-        mashvals = [list(map(float, line.split())) for line in file]
+        mashvals = [list(map(float, line.split())) for i, line in enumerate(file) if i > 0]
     matrix_size = len(mashvals)
     for i in range(matrix_size):
         for j in range(i + 1):
@@ -59,6 +59,8 @@ def mantel_tester(blast_paths, mash_paths, pval=0.01):
         condensed_mash = scipy.spatial.distance.squareform(
             masharray_full, force="tovector", checks=True
         )
+        if condensed_mash.shape[0] <= 3:
+            continue
         try:
             condensed_blast = scipy.spatial.distance.squareform(
                 inverted_blast, force="tovector", checks=True
