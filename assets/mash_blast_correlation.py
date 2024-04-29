@@ -13,7 +13,9 @@ import scipy
 
 def fill_triangle_matrix(mash_tabpath):
     with open(mash_tabpath, "r") as file:
-        mashvals = [list(map(float, line.split())) for i, line in enumerate(file) if i > 0]
+        mashvals = [
+            list(map(float, line.split())) for i, line in enumerate(file) if i > 0
+        ]
     matrix_size = len(mashvals)
     for i in range(matrix_size):
         for j in range(i + 1):
@@ -88,13 +90,19 @@ def mantel_tester(blast_paths, mash_paths, pval=0.01):
             "p_value": result.p,
             "z_score": result.z,
         }
-    print(f"{len(failed_tabs)} blast matrixes could not be analyzed due to non-symmetrical, less than three alleles or different shape: {failed_tabs}")
+    print(
+        f"{len(failed_tabs)} blast matrixes could not be analyzed due to non-symmetrical, less than three alleles or different shape: {failed_tabs}"
+    )
     return mantel_summary
 
 
 # Argument parser setup
-parser = argparse.ArgumentParser(description='Process the Mantel test for genetic data.')
-parser.add_argument('root_path', type=str, help='The root directory containing the datasets.')
+parser = argparse.ArgumentParser(
+    description="Process the Mantel test for genetic data."
+)
+parser.add_argument(
+    "root_path", type=str, help="The root directory containing the datasets."
+)
 args = parser.parse_args()
 
 # Use the root_path argument
@@ -106,7 +114,7 @@ all_results = {}
 for dataset in datasets:
     blast_paths = sorted(glob.glob(os.path.join(root_path, dataset, "blast", "*.csv")))
     mash_paths = sorted(glob.glob(os.path.join(root_path, dataset, "mash", "*.txt")))
-    mantel_summary = mantel_tester(blast_paths, mash_paths, pval=0.01)  
+    mantel_summary = mantel_tester(blast_paths, mash_paths, pval=0.01)
     all_results[dataset] = mantel_summary
     with open(f"mantel_test_pval001_{dataset}.json", "w") as f:
         json.dump(mantel_summary, f)
