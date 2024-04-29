@@ -1,22 +1,22 @@
+import argparse
+import glob
+import json
+import os
+from difflib import SequenceMatcher
+
+import mantel
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import glob
-import os
-import mantel
 import scipy
-from difflib import SequenceMatcher
-import json
-import matplotlib.pyplot as plt
 
 
 def fill_triangle_matrix(mash_tabpath):
     with open(mash_tabpath, "r") as file:
         mashvals = [list(map(float, line.split())) for line in file]
-
     matrix_size = len(mashvals)
-
     for i in range(matrix_size):
-        for j in range(i + 1):  # Only fill values up to the diagonal
+        for j in range(i + 1):
             mashvals[i][j] = mashvals[i][j]
     full_mashtab = mashvals
     tri_mashtable = pd.DataFrame(full_mashtab).fillna(0)
@@ -51,14 +51,11 @@ def mantel_tester(blast_paths, mash_paths, pval=0.01):
             None, blast_filename, mash_filename
         ).find_longest_match()
         common_name = blast_filename[match.a : match.a + match.size].strip(".")
-
         blastable = pd.read_csv(blast_tabpath)
         blastarray = blastable.drop(blastable.columns[0], axis=1).to_numpy()
         mirror_blastarray = take_upper_tri_and_dup(blastarray)
         inverted_blast = 100 - mirror_blastarray
-
         masharray_full = fill_triangle_matrix(mash_tabpath)
-
         condensed_mash = scipy.spatial.distance.squareform(
             masharray_full, force="tovector", checks=True
         )
@@ -87,14 +84,45 @@ def mantel_tester(blast_paths, mash_paths, pval=0.01):
     return mantel_summary
 
 
-blast_paths = sorted(glob.glob("blast/*.csv"))
-mash_paths = sorted(glob.glob("mash/mash*.txt"))
-mantel_summary = mantel_tester(blast_paths, mash_paths, pval=0.01)
+# Argument parser setup
+parser = argparse.ArgumentParser(description='Process the Mantel test for genetic data.')
+parser.add_argument('root_path', type=str, help='The root directory containing the datasets.')
+args = parser.parse_args()
 
-with open("mantel_test_pval001.json", "w") as f:
-    json.dump(mantel_summary, f)
+# Use the root_path argument
+root_path = args.root_path
 
-mantel_df_pval001 = pd.DataFrame.from_dict(mantel_summary)
-mantel_df_pval001_tr = mantel_df_pval001.T
-mantel_df_pval001_tr.boxplot(column=["veridical_correlation"], return_type="axes")
-plt.show()
+datasets = ["brucella", "listeria", "mtuberculosis"]
+all_results = {}
+
+for dataset in datasets:
+    blast_paths = sorted(glob.glob(os.path.join(root_path, dataset, "blast", "*.csv")))
+    mash_paths = sorted(glob.glob(os.path.join(root_path, dataset, "mash", "*.txt")))
+    mantel_summary = mantel_tester(blast_paths, mash_paths, pval=0.01)
+    all_results[dataset] = mantel_summary
+    with open(f"mantel_test_pval001_{dataset}.json", "w") as f:
+        json.dump(mantel_summary, f)
+
+# Create DataFrame for visualization
+results_df = pd.DataFrame(
+    {
+        (dataset, key): value["veridical_correlation"]
+        for dataset, results in all_results.items()
+        for key, value in results.items()
+    }
+).T.reset_index()
+results_df.columns = ["Dataset", "Comparison", "Veridical Correlation"]
+
+# Crea el boxplot
+fig, ax = plt.subplots(figsize=(10, 6))  # Dimensiones en pulgadas (ancho, alto)
+results_df.boxplot(by="Dataset", column=["Veridical Correlation"], grid=False, ax=ax)
+plt.title("Dataset mash-blast correlation comparison")  # Título opcional
+plt.suptitle("")  # Elimina el título por defecto
+plt.xlabel("Dataset")  # Etiqueta para el eje x
+plt.ylabel("Mantel correlation value")  # Etiqueta para el eje y
+
+# Guarda el boxplot como PNG
+plt.savefig(
+    "boxplot_mantel_test.png", dpi=300, bbox_inches="tight"
+)  # Guarda con alta resolución y ajusta el borde
+plt.close()  # Cierra la figura para liberar memoria
