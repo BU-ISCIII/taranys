@@ -5,6 +5,6 @@ click
 leidenalg
 questionary
 bio
-scikit - learn
+scikit-learn
 plotly
 kaleido
