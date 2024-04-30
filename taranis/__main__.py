@@ -18,7 +18,6 @@ import taranis.allele_calling
 
 import taranis.inferred_alleles
 
-# import pdb
 log = logging.getLogger()
 
 # Set up rich stderr console
@@ -657,28 +656,26 @@ def distance_matrix(
     start = time.perf_counter()
     # filter the alleles matrix according to the thresholds and filters
     allele_matrix = pd.read_csv(alleles, sep=",", index_col=0, header=0)
-    filtering_string = ["ASM", "ALM"]
+    to_mask = ["ASM", "ALM", "TPR", "PAMA"]
     if paralog_filter:
-        filtering_string.append("NIPH")
-        filtering_string.append("NIPHEM")
+        to_mask.append("NIPH")
+        to_mask.append("NIPHEM")
     if lnf_filter:
-        filtering_string.append("LNF")
+        to_mask.append("LNF")
     if plot_filter:
-        filtering_string.append("PLOT")
+        to_mask.append("PLOT")
     # pdb.set_trace()
-    filtered_allele = taranis.utils.filter_data_frame_by_parameters(
-        allele_matrix,
-        locus_missing_threshold,
-        sample_missing_threshold,
-        filtering_string,
-        replaced_by_zero=False,
-    )
+    # filtered_allele = taranis.utils.filter_df(
+    #     allele_matrix,
+    #     sample_missing_threshold,
+    #     to_mask,
+    # )
+    allele_matrix_fil = allele_matrix
     # Create the distance matrix
-    # pdb.set_trace()
-    d_matrix_obj = taranis.distance.HammingDistance(filtered_allele)
-    distance_matrix = d_matrix_obj.create_matrix()
-    # pdb.set_trace()
-    print(distance_matrix)
+    d_matrix_obj = taranis.distance.HammingDistance(allele_matrix_fil)
+    distance_matrix = d_matrix_obj.create_matrix(to_mask)
+    distance_matrix.to_csv(f"{output}/distance_matrix.csv")
+
     finish = time.perf_counter()
     print(f"Distance matrix finish in {round((finish-start)/60, 2)} minutes")
     log.info("Distance matrix finish in %s minutes", round((finish - start) / 60, 2))
