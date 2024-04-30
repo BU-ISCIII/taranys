@@ -664,17 +664,24 @@ def distance_matrix(
         to_mask.append("LNF")
     if plot_filter:
         to_mask.append("PLOT")
-    # pdb.set_trace()
-    # filtered_allele = taranis.utils.filter_df(
-    #     allele_matrix,
-    #     sample_missing_threshold,
-    #     to_mask,
-    # )
-    allele_matrix_fil = allele_matrix
+
+    allele_matrix_fil = taranis.utils.filter_df(
+        allele_matrix,
+        locus_missing_threshold,
+        sample_missing_threshold,
+        to_mask,
+    )
+    allele_matrix_fil.to_csv(f"{output}/allele_matrix_fil.csv")
+
     # Create the distance matrix
-    d_matrix_obj = taranis.distance.HammingDistance(allele_matrix_fil)
+    d_matrix_obj = taranis.distance.HammingDistance(allele_matrix)
     distance_matrix = d_matrix_obj.create_matrix(to_mask)
     distance_matrix.to_csv(f"{output}/distance_matrix.csv")
+
+    # Create the filtered distance matrix
+    d_matrix_obj = taranis.distance.HammingDistance(allele_matrix_fil)
+    distance_matrix = d_matrix_obj.create_matrix(to_mask)
+    distance_matrix.to_csv(f"{output}/distance_matrix_core.csv")
 
     finish = time.perf_counter()
     print(f"Distance matrix finish in {round((finish-start)/60, 2)} minutes")

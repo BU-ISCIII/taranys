@@ -323,45 +323,28 @@ def file_exists(file_to_check):
     return False
 
 
-"""
-def find_nearest_numpy_value(array, value):
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
-    return array[idx]
-
- """
-
-
 def filter_df(
     data_frame: pd.DataFrame,
     column_thr: int,
     row_thr: int,
-    filter_str: list[str],
-    replaced_by_zero: bool,
+    filter_values: list[str],
 ) -> pd.DataFrame:
-    # get the number of columns and rows
-    num_rows, num_columns = data_frame.shape
-    # remove the columns which the filter strings are higher than the threshold
-    column_threshold = column_thr * num_rows / 100
-    # Condition: Check if any string in the filter list is present in each cell of the DataFrame
-    f_condition = data_frame.apply(
-        lambda column: column.astype(str).str.contains("|".join(filter_str), na=False)
-    )
-    if replaced_by_zero:
-        new_data_frame = data_frame.mask(f_condition, 0)
-    else:
-        # Count the number of hits per column
-        hits_per_column = f_condition.sum()
-        # pdb.set_trace()
-        # Filter for removing columns where the count of hits is higher than the threshold
-        to_be_removed_columns = hits_per_column[
-            hits_per_column > column_threshold
-        ].index
-        new_data_frame = data_frame.drop(columns=to_be_removed_columns)
-    # pdb.set_trace()
-    # remove the rows which the filter strings are higher than the threshold
-    # row_threshold = row_thr * num_columns
-    return new_data_frame
+    # Convert percentages to proportions for easier calculation
+    column_thr /= 100
+    row_thr /= 100
+
+    # Identify filter values and create a mask for the DataFrame
+    mask = data_frame.isin(filter_values)
+
+    # Filter rows: Drop rows where the count of true in mask / total columns >= row_thr
+    rows_to_drop = mask.sum(axis=1) / len(data_frame.columns) >= row_thr
+    filtered_data_frame = data_frame.loc[~rows_to_drop, :]
+
+    # Filter columns: Drop columns where the count of true in mask / total rows >= column_thr
+    cols_to_drop = mask.sum(axis=0) / len(data_frame) >= column_thr
+    filtered_data_frame = filtered_data_frame.loc[:, ~cols_to_drop]
+
+    return filtered_data_frame
 
 
 def folder_exists(folder_to_check):
