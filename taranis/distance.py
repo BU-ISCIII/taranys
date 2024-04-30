@@ -1,6 +1,7 @@
 import io
 import logging
 import pandas as pd
+import numpy as np
 import subprocess
 import rich
 import sys
@@ -72,63 +73,72 @@ class DistanceMatrix:
         out_data = out.decode("UTF-8").split("\n")
         allele_names = [item.split("\t")[0] for item in out_data[1:-1]]
         # create file in memory to increase speed
-        dist_matrix = io.StringIO()
-        dist_matrix.write("alleles\t" + "\t".join(allele_names) + "\n")
-        dist_matrix.write("\n".join(out_data[1:]))
-        dist_matrix.seek(0)
+        self.allele_matrix = io.StringIO()
+        self.allele_matrix.write("alleles\t" + "\t".join(allele_names) + "\n")
+        self.allele_matrix.write("\n".join(out_data[1:]))
+        self.allele_matrix.seek(0)
         matrix_pd = pd.read_csv(
-            dist_matrix, sep="\t", index_col="alleles", engine="python"
+            self.allele_matrix, sep="\t", index_col="alleles", engine="python"
         ).fillna(0)
         # Close object and discard memory buffer
-        dist_matrix.close()
+        self.allele_matrix.close()
         log.debug(f"create distance for {allele_name}")
         return matrix_pd
 
 
 class HammingDistance:
-    def __init__(self, dist_matrix: pd.DataFrame) -> "HammingDistance":
+    def __init__(self, allele_matrix: pd.DataFrame) -> "HammingDistance":
         """HammingDistance instance creation
 
         Args:
-            dist_matrix (pd.DataFrame): Distance matrix
+            self.allele_matrix (pd.DataFrame): Distance matrix
 
         Returns:
             HammingDistance: created hamming distance
         """
-        self.dist_matrix = dist_matrix
+        self.allele_matrix = allele_matrix
 
-    def create_matrix(self) -> pd.DataFrame:
-        """Create hamming distance matrix using external program called mash
+    def create_matrix(self, mask_values: list) -> pd.DataFrame:
+        """Create hamming distance matrix
+
+        Args:
+            mask_values: list of values to mask p.e ["ASM", "LNF"]
 
         Returns:
             pd.DataFrame: Hamming distance matrix as panda DataFrame
         """
+        # Mask unwanted values directly in the DataFrame
+        regex_pattern = '|'.join([f".*{value}.*" for value in mask_values])
+        self.allele_matrix.replace(regex_pattern, np.nan, regex=True, inplace=True)
 
+        # Get unique values excluding NaN
         unique_values = pd.unique(
-            self.dist_matrix[list(self.dist_matrix.keys())].values.ravel("K")
+            self.allele_matrix.values.ravel("K")
         )
+        unique_values = unique_values[~pd.isna(unique_values)]  # Exclude NaNs from unique values
+
         # Create binary matrix ('1' or '0' ) matching the input matrix vs the unique_values[0]
         # astype(int) is used to transform the boolean matrix into integer
-        U = self.dist_matrix.eq(unique_values[0]).astype(int)
+        U = self.allele_matrix.eq(unique_values[0]).astype(int)
         # multiply the matrix with the transpose
         H = U.dot(U.T)
 
         # Repeat for each unique value
         for unique_val in range(1, len(unique_values)):
-            U = self.dist_matrix.eq(unique_values[unique_val]).astype(int)
+            U = self.allele_matrix.eq(unique_values[unique_val]).astype(int)
             # Add the value of the binary matrix with the previous stored values
             H = H.add(U.dot(U.T))
 
-        return len(self.dist_matrix.columns) - H
+        # Convert to Boolean where True is not NaN (valid)
+        valid_data = self.allele_matrix.notna()
 
-        """
-         dist_matrix = self.dist_matrix
-        allele_names = dist_matrix.index
-        hamming_matrix = pd.DataFrame(index=allele_names, columns=allele_names)
-        for i in allele_names:
-            for j in allele_names:
-                hamming_matrix.at[i, j] = sum(
-                    dist_matrix.loc[i] != dist_matrix.loc[j]
-                )
-        return hamming_matrix
-        """
+        # Use broadcasting to find pairwise non-NaN entries
+        # valid_data[:, None] adds a new axis, making it a 3D array where each 2D slice is one sample's valid data
+        # We then logical AND across all pairs of samples
+        pairwise_valid = valid_data.values[:, None] & valid_data.values
+
+        # Sum along the third dimension to get pairwise counts of non-NaN positions
+        pairwise_valid_counts = pairwise_valid.sum(axis=2)
+        distance_matrix = pairwise_valid_counts - H
+
+        return pd.DataFrame(distance_matrix, index=self.allele_matrix.index, columns=self.allele_matrix.index)
