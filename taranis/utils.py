@@ -332,7 +332,7 @@ def find_nearest_numpy_value(array, value):
  """
 
 
-def filter_data_frame_by_parameters(
+def filter_df(
     data_frame: pd.DataFrame,
     column_thr: int,
     row_thr: int,
