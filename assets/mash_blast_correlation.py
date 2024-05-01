@@ -108,7 +108,7 @@ args = parser.parse_args()
 # Use the root_path argument
 root_path = args.root_path
 
-datasets = ["brucella", "listeria", "mtuberculosis"]
+datasets = ["bmelitensis", "lmonocytogenes", "mtuberculosis"]
 all_results = {}
 
 for dataset in datasets:
@@ -138,6 +138,7 @@ plt.title("Dataset mash-blast correlation")  # Título opcional
 plt.suptitle("")  # Elimina el título por defecto
 plt.xlabel("Dataset")  # Etiqueta para el eje x
 plt.ylabel("Mantel correlation value")  # Etiqueta para el eje y
+ax.set_xticklabels([ticklabel.get_text().capitalize() for ticklabel in ax.get_xticklabels()])
 
 # Guarda el boxplot como PNG
 plt.savefig(
