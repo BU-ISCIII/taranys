@@ -333,6 +333,7 @@ def filter_df(
     column_thr /= 100
     row_thr /= 100
 
+    import pdb; pdb.set_trace()
     # Identify filter values and create a mask for the DataFrame
     mask = data_frame.isin(filter_values)
 

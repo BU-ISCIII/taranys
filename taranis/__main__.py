@@ -599,8 +599,8 @@ def allele_calling(
     required=False,
     multiple=False,
     type=int,
-    default=100,
-    help="Threshold for missing alleles in locus, which loci is excluded from distance matrix",
+    default=0,
+    help="Maximum percentaje of missing values a locus can have, otherwise is filtered. By default core genome is calculated, locus must be found in all samples.",
 )
 @click.option(
     "-s",
@@ -609,7 +609,7 @@ def allele_calling(
     multiple=False,
     type=int,
     default=20,
-    help="Threshold for missing samples, which sample is excluded from distance matrix",
+    help="Maximum percentaje for missing values a sample can have, otherwise it is filtered",
 )
 @click.option(
     "--paralog-filter/--no-paralog-filter",
