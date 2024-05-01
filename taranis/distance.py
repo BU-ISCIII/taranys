@@ -108,14 +108,14 @@ class HammingDistance:
             pd.DataFrame: Hamming distance matrix as panda DataFrame
         """
         # Mask unwanted values directly in the DataFrame
-        regex_pattern = '|'.join([f".*{value}.*" for value in mask_values])
+        regex_pattern = "|".join([f".*{value}.*" for value in mask_values])
         self.allele_matrix.replace(regex_pattern, np.nan, regex=True, inplace=True)
 
         # Get unique values excluding NaN
-        unique_values = pd.unique(
-            self.allele_matrix.values.ravel("K")
-        )
-        unique_values = unique_values[~pd.isna(unique_values)]  # Exclude NaNs from unique values
+        unique_values = pd.unique(self.allele_matrix.values.ravel("K"))
+        unique_values = unique_values[
+            ~pd.isna(unique_values)
+        ]  # Exclude NaNs from unique values
 
         # Create binary matrix ('1' or '0' ) matching the input matrix vs the unique_values[0]
         # astype(int) is used to transform the boolean matrix into integer
@@ -141,4 +141,8 @@ class HammingDistance:
         pairwise_valid_counts = pairwise_valid.sum(axis=2)
         distance_matrix = pairwise_valid_counts - H
 
-        return pd.DataFrame(distance_matrix, index=self.allele_matrix.index, columns=self.allele_matrix.index)
+        return pd.DataFrame(
+            distance_matrix,
+            index=self.allele_matrix.index,
+            columns=self.allele_matrix.index,
+        )
