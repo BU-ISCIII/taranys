@@ -324,7 +324,7 @@ def file_exists(file_to_check):
 
 
 def filter_df(
-    data_frame: pd.DataFrame,
+    df: pd.DataFrame,
     column_thr: int,
     row_thr: int,
     filter_values: list[str],
@@ -334,17 +334,17 @@ def filter_df(
     row_thr /= 100
 
     # Identify filter values and create a mask for the DataFrame
-    mask = data_frame.isin(filter_values)
+    mask = df.isin(filter_values)
 
     # Filter rows: Drop rows where the count of true in mask / total columns >= row_thr
-    rows_to_drop = mask.sum(axis=1) / len(data_frame.columns) >= row_thr
-    filtered_data_frame = data_frame.loc[~rows_to_drop, :]
+    rows_to_drop = mask.sum(axis=1) / len(df.columns) > row_thr
+    filtered_df = df.loc[~rows_to_drop, :]
 
     # Filter columns: Drop columns where the count of true in mask / total rows >= column_thr
-    cols_to_drop = mask.sum(axis=0) / len(data_frame) >= column_thr
-    filtered_data_frame = filtered_data_frame.loc[:, ~cols_to_drop]
+    cols_to_drop = mask.sum(axis=0) / len(df) > column_thr
+    filtered_df = filtered_df.loc[:, ~cols_to_drop]
 
-    return filtered_data_frame
+    return filtered_df
 
 
 def folder_exists(folder_to_check):
