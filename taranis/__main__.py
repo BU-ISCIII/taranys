@@ -655,7 +655,7 @@ def distance_matrix(
         _ = taranis.utils.prompt_user_if_folder_exists(output)
     start = time.perf_counter()
     # filter the alleles matrix according to the thresholds and filters
-    allele_matrix = pd.read_csv(alleles, sep=",", index_col=0, header=0)
+    allele_matrix = pd.read_csv(alleles, sep=",", index_col=0, header=0, dtype=str)
     to_mask = ["ASM", "ALM", "TPR", "PAMA"]
     if paralog_filter:
         to_mask.append("NIPH")
@@ -679,9 +679,9 @@ def distance_matrix(
     distance_matrix.to_csv(f"{output}/distance_matrix.csv")
 
     # Create the filtered distance matrix
-    d_matrix_obj = taranis.distance.HammingDistance(allele_matrix_fil)
-    distance_matrix = d_matrix_obj.create_matrix(to_mask)
-    distance_matrix.to_csv(f"{output}/distance_matrix_core.csv")
+    d_matrix_core_obj = taranis.distance.HammingDistance(allele_matrix_fil)
+    distance_matrix_core = d_matrix_core_obj.create_matrix(to_mask)
+    distance_matrix_core.to_csv(f"{output}/distance_matrix_core.csv")
 
     finish = time.perf_counter()
     print(f"Distance matrix finish in {round((finish-start)/60, 2)} minutes")
