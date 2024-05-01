@@ -334,7 +334,7 @@ def filter_df(
     row_thr /= 100
 
     # Identify filter values and create a mask for the DataFrame
-    regex_pattern = '|'.join(filter_values)  # This creates 'ASM|LNF|EXC'
+    regex_pattern = "|".join(filter_values)  # This creates 'ASM|LNF|EXC'
 
     # Apply regex across the DataFrame to create a mask
     mask = df.applymap(lambda x: bool(re.search(regex_pattern, str(x))))
