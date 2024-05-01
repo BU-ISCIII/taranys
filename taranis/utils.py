@@ -334,7 +334,10 @@ def filter_df(
     row_thr /= 100
 
     # Identify filter values and create a mask for the DataFrame
-    mask = df.isin(filter_values)
+    regex_pattern = '|'.join(filter_values)  # This creates 'ASM|LNF|EXC'
+
+    # Apply regex across the DataFrame to create a mask
+    mask = df.applymap(lambda x: bool(re.search(regex_pattern, str(x))))
 
     # Filter rows: Drop rows where the count of true in mask / total columns >= row_thr
     rows_to_drop = mask.sum(axis=1) / len(df.columns) > row_thr
