@@ -343,8 +343,10 @@ def filter_df(
     rows_to_drop = mask.sum(axis=1) / len(df.columns) > row_thr
     filtered_df = df.loc[~rows_to_drop, :]
 
+    mask_fil = filtered_df.applymap(lambda x: bool(re.search(regex_pattern, str(x))))
+
     # Filter columns: Drop columns where the count of true in mask / total rows >= column_thr
-    cols_to_drop = mask.sum(axis=0) / len(df) > column_thr
+    cols_to_drop = mask_fil.sum(axis=0) / len(df) > column_thr
     filtered_df = filtered_df.loc[:, ~cols_to_drop]
 
     return filtered_df
