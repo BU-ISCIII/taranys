@@ -337,7 +337,7 @@ def filter_df(
     mask = data_frame.isin(filter_values)
 
     # Filter rows: Drop rows where the count of true in mask / total columns >= row_thr
-    rows_to_drop = len(data_frame.columns)
+    rows_to_drop = mask.sum(axis=1) / len(data_frame.columns) >= row_thr
     filtered_data_frame = data_frame.loc[~rows_to_drop, :]
 
     # Filter columns: Drop columns where the count of true in mask / total rows >= column_thr
