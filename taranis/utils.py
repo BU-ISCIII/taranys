@@ -333,12 +333,11 @@ def filter_df(
     column_thr /= 100
     row_thr /= 100
 
-    import pdb; pdb.set_trace()
     # Identify filter values and create a mask for the DataFrame
     mask = data_frame.isin(filter_values)
 
     # Filter rows: Drop rows where the count of true in mask / total columns >= row_thr
-    rows_to_drop = mask.sum(axis=1) / len(data_frame.columns) >= row_thr
+    rows_to_drop = len(data_frame.columns)
     filtered_data_frame = data_frame.loc[~rows_to_drop, :]
 
     # Filter columns: Drop columns where the count of true in mask / total rows >= column_thr
