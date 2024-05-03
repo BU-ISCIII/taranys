@@ -901,7 +901,7 @@ def collect_data(
                                     + ","
                                     + ref_allele
                                     + ","
-                                    + ",".join(snp_info)
+                                    + ",".join([str(value) for value in snp_info])
                                     + "\n"
                                 )
     # create alignment files
