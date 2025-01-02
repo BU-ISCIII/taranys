@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -13,12 +13,22 @@ authors = [
     {name = "Luis Chapado", email = "lchapado@externos.isciii.es"},
 ]
 maintainers = [
+    {name = "Sara Monzon", email = "smonzon@isciii.es"},
     {name = "Luis Chapado", email = "lchapado@externos.isciii.es"}
 ]
-description = "Tools for gene-by-gene allele calling analysis"
+description = "cg/wgMLST allele calling software, schema evaluation and allele distance estimation for outbreak reserch."
 readme = "README.md"
 license = {file = "LICENSE"}
-
+keywords = [
+  "bioinformatics",
+  "assembly",
+  "cgMLST",
+  "wgMLST",
+  "MLST schema"
+]
+[project.urls]
+Homepage = "https://github.com/bu-isciii/taranys"
+Issues = "https://github.com/bu-isciii/taranys/issues"
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
