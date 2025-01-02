@@ -4,13 +4,14 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - python=3.10
-  - conda-forge::poetry=1.7.1
+  - python>=3.10
+  - conda-forge::poetry>=1.7.1
   - bioconda::prokka>=1.14
   - bioconda::blast>=2.9
   - bioconda::mash>=2
-  - bioconda::prodigal=2.6.3
-  - bioconda::mafft=7.525
+  - bioconda::prodigal>=2.6.3
+  - bioconda::mafft>=7.505
   - pip
   - pip :
       -  -r requirements.txt
+      - .
