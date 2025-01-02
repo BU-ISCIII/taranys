@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "taranys"
+version = "3.0.0"
+dynamic = ["dependencies"]
+requires-python = ">=3.10"
+
+authors = [
+    {name = "Sara Monzon", email = "smonzon@isciii.es"},
+    {name = "Luis Chapado", email = "lchapado@externos.isciii.es"},
+]
+maintainers = [
+    {name = "Sara Monzon", email = "smonzon@isciii.es"},
+    {name = "Luis Chapado", email = "lchapado@externos.isciii.es"}
+]
+description = "cg/wgMLST allele calling software, schema evaluation and allele distance estimation for outbreak reserch."
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = [
+  "bioinformatics",
+  "assembly",
+  "cgMLST",
+  "wgMLST",
+  "MLST schema"
+]
+[project.urls]
+Homepage = "https://github.com/bu-isciii/taranys"
+Issues = "https://github.com/bu-isciii/taranys/issues"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.scripts]
+taranys = "taranys.__main__:run_taranys"
+
+[tool.setuptools.packages.find]
+exclude = ["img", "virtualenv"]

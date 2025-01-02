@@ -1,38 +1,55 @@
 name: tests ci
-# This workflow runs the pipeline with the minimal test dataset to check that it completes any errors
+# This workflow runs the pipeline with the minimal test dataset to check 
+# is completed without any errors
 on:
-  push:
-    branches: [develop]
-  pull_request_target:
-    branches: [develop]
-  release:
-    types: [published]
+    pull_request:
+    push:
 
 jobs:
-  push_dockerhub:
-    name: Push new Docker image to Docker Hub (dev)
+  test_taranys:
     runs-on: ubuntu-latest
-    # Only run for the official repo, for releases and merged PRs
-    if: ${{ github.repository == 'BU-ISCIII/taranis' }}
-    env:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_PASS: ${{ secrets.DOCKERHUB_PASSWORD }}
-    steps:
-      - name: Check out pipeline code
-        uses: actions/checkout@v2
 
-      - name: Build new docker image
-        run: docker build --no-cache . -t buisciii/taranis:dev
-
-      - name: Push Docker image to DockerHub (develop)
-        run: |
-          echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-          docker push buisciii/taranis:dev
-  run-tests:
-    name: Run tests
-    needs: push_dockerhub
-    runs-on: ubuntu-latest
     steps:
-      - name: Run pipeline with test data
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: taranys_env
+          environment-file: environment.yml
+
+      - name: Verify conda environment
+        run: conda env list
+
+      - name: Activate env and install taranys
         run: |
-            docker run buisciii/taranis:dev bash -c /opt/taranis/test/test.sh
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate taranys_env
+          python -m pip install .
+          
+      - name: Testing analyze schema allele
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate taranys_env
+          taranys analyze-schema -i  test/MLST_listeria/analyze_schema -o analyze_schema_test  --cpus 1 --output-allele-annot --remove-no-cds --remove-duplicated --remove-subset
+
+      - name: Testing reference allele
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate taranys_env
+          taranys reference-alleles -s test/MLST_listeria/reference_allele -o reference_allele_test --cpus 1 
+          
+      - name: Testing allele calling
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate taranys_env
+          taranys reference-alleles -s analyze_schema_test/new_schema -o reference_allele --cpus 1 
+          taranys allele-calling --force --schema analyze_schema_test/new_schema --reference reference_allele --annotation analyze_schema_test/allele_annotation.tar.gz --output allele_calling_test --cpus 1 --snp --alignment test/samples_listeria/*.fasta
+
+      - name: Testing distance matrix
+        run: |
+            source $CONDA/etc/profile.d/conda.sh
+            conda activate taranys_env
+            mkdir distance_matrix_result
+            taranys distance-matrix --alleles allele_calling_test/allele_calling_match.csv --force --output distance_matrix_result

@@ -9,6 +9,7 @@ __pycache__/
 *.log.*
 # Projects files
 *.komodoproject
+*.vscode/
 
 # Distribution / packaging
 .Python
@@ -29,6 +30,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+poetry.lock
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -90,6 +92,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+virtualenv/
 
 # Spyder project settings
 .spyderproject

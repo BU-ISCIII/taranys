@@ -1,17 +1,17 @@
-name: taranis
+name: taranys_env
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
-  - conda-forge::python>=3.6
-  - conda-forge::biopython==1.72
-  - conda-forge::pandas==1.2.4
-  - conda-forge::progressbar==2.5
-  - conda-forge::openpyxl==3.0.7
-  - conda-forge::plotly==5.0.0
-  - conda-forge::numpy==1.20.3
+  - python>=3.10
+  - conda-forge::poetry>=1.7.1
   - bioconda::prokka>=1.14
   - bioconda::blast>=2.9
   - bioconda::mash>=2
-  - bioconda::prodigal=2.6.3
+  - bioconda::prodigal>=2.6.3
+  - bioconda::mafft>=7.505
+  - pip
+  - pip :
+      -  -r requirements.txt
+      - .

@@ -1,348 +1,441 @@
-# Taranis
+# taranys
 
-- [Introduction](#introduction)
-- [Dependencies](#dependencies)
-- [Installation](#installation)
-  - [Install from source](#install-from-source)
-  - [Install using conda](#install-using-conda)
-- [Quick usage](#quick-usage)
-- [Usage](#usage)
-- [Output](#output)
-- [Illustrated pipeline](#illustrated-pipeline)
-
-
+- [taranys](#taranys)
+  - [Introduction](#introduction)
+  - [Dependencies](#dependencies)
+  - [Installation](#installation)
+    - [Install from source](#install-from-source)
+    - [Install using conda](#install-using-conda)
+  - [Usage](#usage)
+    - [**analyze\_schema:**](#analyze_schema)
+    - [**reference\_alleles:**](#reference_alleles)
+    - [**allele\_calling:**](#allele_calling)
+    - [**distance\_matrix:**](#distance_matrix)
+  - [Output](#output)
 
 ## Introduction
 
-**Taranis** is a computational stand-alone pipeline for **gene-by-gene allele calling analysis** based on BLASTn using  whole genome (wg) and core genome (cg) multilocus sequence typing (MLST) schemas on complete or draft genomes resulting from de novo assemblers, while tracking helpful and informative data among the process.
+**taranys** is a computational stand-alone pipeline for **gene-by-gene allele calling analysis** based on BLASTn using  whole genome (wg) and core genome (cg) multilocus sequence typing (MLST) schemas on complete or draft genomes resulting from de novo assemblers, while tracking helpful and informative data among the process.
 
-Taranis includes four main functionalities: MLST **schema analysis**, gene-by-gene **allele calling**, **reference alleles** obtainment for allele calling analysis and the final **distance matrix** construction.
+taranys includes four main functionalities: MLST **schema analysis**, gene-by-gene **allele calling**, **reference alleles** obtainment for allele calling analysis and the final **distance matrix** construction.
 
-
+![taranis_schema](assets/taranis_schema.png)
 
 ## Dependencies
 
-* Python >=3.6
-* NCBI_blast >= v2.9
-* prokka >=1.14
-* prodigal v2.6.3
-* mash >=2
-* biopython v1.72
-* pandas v1.2.4
-* progressbar v2.5
-* openpyxl v3.0.7
-* plotly v5.0.0
-* numpy v1.20.3
-
-
+- Python >=3.10
+- NCBI_blast >= v2.9
+- prokka >=1.14.6
+- mafft >= 7.505
+- mash >= 2
+- python deps:
+  - igraph>=0.9.8
+  - rich>=13.4.1
+  - click>=8.1.3
+  - leidenalg>=0.9.1
+  - questionary>=1.10.0
+  - bio>=1.6.0
+  - scikit-learn>=1.2.0
+  - plotly>=5.11.0
+  - kaleido>=0.2.1
+  - six>=1.16.0
 
 ## Installation
 
-#### Install from source
+### Install from source
 
-Install all dependencies and add them to $PATH.
-
-`git clone https://github.com/BU-ISCIII/taranis.git`
-
-Add taranis and ./bin to $PATH.
-
-
-#### Install using conda
-
-This option is recomended.
-
-Install Anaconda3.
-
-`conda install -c conda-forge -c bioconda -c defaults taranis`
-
-Wait for the environment to solve. <br>
-Ignore warnings/errors.
-
-
-
-## Quick usage
-
-- **analyze_schema mode:**
-
-  Schema analysis:
-
-```
-taranis analyze_schema \
--inputdir schema_dir \
--outputdir YYYY-MM-DD_taranis_analyze_schema_dir
+```bash
+git clone https://github.com/BU-ISCIII/taranys.git
 ```
 
-  Schema analysis and duplicated alleles, alleles subsequences and no CDS alleles filtering:
+Install dependencies and taranys using conda or micromamba:
 
-```
-taranis analyze_schema \
--inputdir schema_dir \
--outputdir YYYY-MM-DD_taranis_analyze_schema_dir \
--removesubsets True \
--removeduplicates True \
--removenocds True
+```bash
+cd /path/to/clonedrepo
+micromamba install -f environment.yml
 ```
 
+### Install using conda
 
-- **reference_alleles mode:**
+This option is the recommended option for installing taranys.
 
-  Get reference alleles:
-
+```bash
+micromamba install -c conda-forge -c bioconda -c defaults taranys
 ```
-taranis reference_alleles \
--coregenedir schema_dir \
--outputdir YYYY-MM-DD_taranis_reference_alleles_dir
-```
-
-
-- **allele_calling mode:**
-
-  Run allele calling:
-
-```
-taranis allele_calling \
--coregenedir schema_dir \
--refalleles YYYY-MM-DD_taranis_reference_alleles_dir \
--inputdir samples_dir \
--refgenome reference_genome.fasta \
--outputdir YYYY-MM-DD_taranis_allele_calling_dir
-```
-
-  Run allele calling getting ST profile:
-
-```
-taranis allele_calling \
--coregenedir schema_dir \
--refalleles YYYY-MM-DD_taranis_reference_alleles_dir \
--inputdir samples_dir \
--refgenome reference_genome.fasta \
--profile profile.csv \
--outputdir YYYY-MM-DD_taranis_allele_calling_dir
-```
-
-- **distance_matrix mode:**
-
-  Get distance matrix:
-
-```
-taranis distance_matrix \
--alleles_matrix YYYY-MM-DD_taranis_allele_calling_dir/result.tsv -outputdir YYYY-MM-DD_taranis_distance_matrix_dir
-```
-
-  <p>Get distance matrix filtering loci and samples which missing values percentage is above specified threshold:
-
-```
-taranis distance_matrix\
--alleles_matrix YYYY-MM-DD_taranis_allele_calling_dir/result.tsv\
--locus_missing_threshold 20 \
--sample_missing_threshold 50 \
--outputdir YYYY-MM-DD_taranis_distance_matrix_dir
-```
-
-
 
 ## Usage
 
-- **analyze_schema mode:**
+### **analyze_schema:**
 
-```
-usage: taranis.py analyze_schema [-h] -inputdir INPUTDIR -outputdir OUTPUTDIR [-removesubsets REMOVESUBSETS] [-removeduplicates REMOVEDUPLICATES] [-removenocds REMOVENOCDS] [-newschema NEWSCHEMA]
-                                 [-genus GENUS] [-species SPECIES] [-usegenus USEGENUS] [-cpus CPUS]
+To assess the quality of the schema, the following analysis is performed for each locus in the schema:
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -inputdir INPUTDIR    Directory where are the schema files.
-  -outputdir OUTPUTDIR  Directory where the result files will be stored.
-  -removesubsets REMOVESUBSETS
-                        Remove allele subsequences from the schema.True: Remove subsets.False: Do not remove subsets.Default is False.
-  -removeduplicates REMOVEDUPLICATES
-                        Remove duplicated alleles from the schema.True: Remove duplicates.False: Do not remove duplicates.Default is False.
-  -removenocds REMOVENOCDS
-                        Remove no CDS alleles from the schema.True: Remove no CDS alleles.False: Do not remove no CDS alleles.Default is False.
-  -newschema NEWSCHEMA  Filter a copy of the core genes schema preserving the analysis core genes schema.True: Create a copy of the core genes schema for filtering.False: Do not create a copy of the
-                        core genes schema for filtering.Default is False.
-  -genus GENUS          Genus name for Prokka schema genes annotation. Default is Genus.
-  -species SPECIES      Species name for Prokka schema genes annotation. Default is species.
-  -usegenus USEGENUS    Use genus-specific BLAST databases for Prokka schema genes annotation (needs --genus). Default is False.
-  -cpus CPUS            Number of CPUS to be used in the program. Default is 1.
-```
+- The existence of potential duplicate alleles within the same locus is examined.
+- The presence of allelic sequences that are partial sequences or subsequences of other alleles is checked.
+- Each allele is evaluated to verify whether it is a coding region (CDS) using the translate function from Biopython's Seq class.
 
+The following quality categories are defined:
 
-- **reference_alleles mode:**
+- “Good” quality: The sequence meets the criteria to be considered a hypothetical CDS.
+- “Bad” quality: The sequence fails to meet the criteria for a hypothetical CDS due to one of the following reasons:
+  - Lack of a start codon (Bad quality: no start codon).
+  - Lack of a stop codon (Bad quality: no stop codon).
+  - Simultaneous absence of both start and stop codons (Bad quality: no start stop).
+  - The sequence length is not a multiple of 3 (Bad quality: no multiple of three).
+  - Presence of multiple stop codons (Bad quality: multiple stop).
 
-```
-usage: taranis.py reference_alleles [-h] -coregenedir COREGENEDIR -outputdir OUTPUTDIR
-                                    [-evalue EVALUE] [-perc_identity PERC_IDENTITY]
-                                    [-reward REWARD] [-penalty PENALTY] [-gapopen GAPOPEN]
-                                    [-gapextend GAPEXTEND] [-num_threads NUM_THREADS] [-cpus CPUS]
+Usage:
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -coregenedir COREGENEDIR
-                        Directory where the core gene files are located.
-  -outputdir OUTPUTDIR  Directory where the result files will be stored.
-  -evalue EVALUE        E-value in BLAST searches. Default is 0.001.
-  -perc_identity PERC_IDENTITY
-                        Identity percent in BLAST searches. Default is 90.
-  -reward REWARD        Match reward in BLAST searches. Default is 1.
-  -penalty PENALTY      Mismatch penalty in BLAST searches. Default is -2.
-  -gapopen GAPOPEN      Gap open penalty in BLAST searches. Default is 1.
-  -gapextend GAPEXTEND  Gap extension penalty in BLAST searches. Default is 1.
-  -num_threads NUM_THREADS
-                        num_threads in BLAST searches. Default is 1.
-  -cpus CPUS            Number of CPUS to be used in the program. Default is 1.
-```
+```bash
+Usage: taranys analyze-schema [OPTIONS]
 
-
-- **allele_calling mode:**
-
-```
-usage: taranis.py allele_calling [-h] -coregenedir COREGENEDIR -refalleles REFALLELES -inputdir
-                                 INPUTDIR -refgenome REFGENOME -outputdir OUTPUTDIR
-                                 [-percentlength PERCENTLENGTH] [-coverage COVERAGE]
-                                 [-evalue EVALUE] [-perc_identity_ref PERC_IDENTITY_REF]
-                                 [-perc_identity_loc PERC_IDENTITY_LOC] [-reward REWARD]
-                                 [-penalty PENALTY] [-gapopen GAPOPEN] [-gapextend GAPEXTEND]
-                                 [-max_target_seqs MAX_TARGET_SEQS] [-max_hsps MAX_HSPS]
-                                 [-num_threads NUM_THREADS] [-flankingnts FLANKINGNTS]
-                                 [-updateschema UPDATESCHEMA] [-profile PROFILE]
-                                 [-updateprofile UPDATEPROFILE] [-cpus CPUS] [-genus GENUS]
-                                 [-species SPECIES] [-usegenus USEGENUS]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -coregenedir COREGENEDIR
-                        Directory where the core gene files are located
-  -refalleles REFALLELES
-                        Directory where the core gene references files are located
-  -inputdir INPUTDIR    Directory where are located the sample fasta files
-  -refgenome REFGENOME  Reference genome file for genes prediction
-  -outputdir OUTPUTDIR  Directory where the result files will be stored
-  -percentlength PERCENTLENGTH
-                        Allowed length percentage to be considered as INF. Outside of this limit it
-                        is considered as ASM or ALM. Default is SD.
-  -coverage COVERAGE    Coverage threshold to exclude found sequences. Outside of this limit it is
-                        considered LNF. Default is 50.
-  -evalue EVALUE        E-value in BLAST searches. Default is 0.001.
-  -perc_identity_ref PERC_IDENTITY_REF
-                        Identity percentage in BLAST searches using reference alleles for each
-                        locus detection in samples. Default is 90.
-  -perc_identity_loc PERC_IDENTITY_LOC
-                        Identity percentage in BLAST searches using all alleles in each locus for
-                        allele identification in samples. Default is 90.
-  -reward REWARD        Match reward in BLAST searches. Default is 1.
-  -penalty PENALTY      Mismatch penalty in BLAST searches. Default is -2.
-  -gapopen GAPOPEN      Gap open penalty in BLAST searches. Default is 1.
-  -gapextend GAPEXTEND  Gap extension penalty in BLAST searches. Default is 1.
-  -max_target_seqs MAX_TARGET_SEQS
-                        max_target_seqs in BLAST searches. Default is 10.
-  -max_hsps MAX_HSPS    max_hsps in BLAST searches. Default is 10.
-  -num_threads NUM_THREADS
-                        num_threads in BLAST searches. Default is 1.
-  -flankingnts FLANKINGNTS
-                        Number of flanking nucleotides to add to each BLAST result obtained after
-                        locus detection in sample using reference allele for correct allele
-                        identification. Default is 100.
-  -updateschema UPDATESCHEMA
-                        Add INF alleles found for each locus to the core genes schema. True: Add
-                        INF alleles to the analysis core genes schema. New: Add INF alleles to a
-                        copy of the core genes schema preserving the analysis core genes schema.
-                        False: Do not update the core gene schema adding new INF alleles found.
-                        Default is True.
-  -profile PROFILE      ST profile file based on core genes schema file to get ST for each sample.
-                        Default is empty and Taranis does not calculate samples ST.
-  -updateprofile UPDATEPROFILE
-                        Add new ST profiles found to the ST profile file. True: Add new ST profiles
-                        to the analysis ST profile file. New: Add Add new ST profiles to a copy of
-                        the ST profile file preserving the analysis ST file. False: Do not update
-                        the ST profile file adding new ST profiles found. Default is True.
-  -cpus CPUS            Number of CPUS to be used in the program. Default is 1.
-  -genus GENUS          Genus name for Prokka schema genes annotation. Default is Genus.
-  -species SPECIES      Species name for Prokka schema genes annotation. Default is species.
-  -usegenus USEGENUS    Use genus-specific BLAST databases for Prokka schema genes annotation
-                        (needs --genus). Default is False.
+Options:
+  -i, --input PATH                Directory where the schema with the core
+                                  gene files are located.   [required]
+  -o, --output PATH               Output folder to save analyze schema
+                                  [required]
+  --remove-subset / --no-remove-subset
+                                  Remove allele subsequences from the schema.
+                                  [default: no-remove-subset]
+  --remove-duplicated / --no-remove-duplicated
+                                  Remove duplicated subsequences from the
+                                  schema.  [default: no-remove-duplicated]
+  --remove-no-cds / --no-remove-no-cds
+                                  Remove no CDS alleles from the schema.
+                                  [default: no-remove-no-cds]
+  --output-allele-annot / --no-output-allele-annot
+                                  output prokka/allele annotation for all
+                                  alleles in locus. Default is True.
+                                  [default: output-allele-annot]
+  --genus TEXT                    Genus name for Prokka schema genes
+                                  annotation. Default is Genus.  [default:
+                                  Genus]
+  --species TEXT                  Species name for Prokka schema genes
+                                  annotation. Default is species  [default:
+                                  species]
+  --usegenus TEXT                 Use genus-specific BLAST databases for
+                                  Prokka schema genes annotation (needs
+                                  --genus). Default is False.  [default:
+                                  Genus]
+  --cpus INTEGER                  Number of cpus used for execution. Default
+                                  is 1  [default: 1]
+  --help                          Show this message and exit.
 ```
 
+Example when removing bad quality alleles is not wanted, just statistics outputted:
 
-- **distance_matrix mode:**
-
-```
-usage: taranis.py distance_matrix [-h] -alleles_matrix ALLELES_MATRIX [-locus_missing_threshold LOCUS_MISSING_THRESHOLD] [-sample_missing_threshold SAMPLE_MISSING_THRESHOLD]
-                                  [-paralog_filter PARALOG_FILTER] [-lnf_filter LNF_FILTER] [-plot_filter PLOT_FILTER] -outputdir OUTPUTDIR
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -alleles_matrix ALLELES_MATRIX
-                        Alleles matrix file from which to obtain distances between samples
-  -locus_missing_threshold LOCUS_MISSING_THRESHOLD
-                        Missing values percentage threshold above which loci are excluded for distance matrix creation. Default is 100.
-  -sample_missing_threshold SAMPLE_MISSING_THRESHOLD
-                        Missing values percentage threshold above which samples are excluded for distance matrix creation. Default is 100.
-  -paralog_filter PARALOG_FILTER
-                        Consider paralog tags (NIPH, NIPHEM) as missing values. Default is True
-  -lnf_filter LNF_FILTER
-                        Consider locus not found tag (LNF) as missing value. Default is True
-  -plot_filter PLOT_FILTER
-                        Consider incomplete alleles found on the tip of a contig tag (PLOT) as missing value. Default is True
-  -outputdir OUTPUTDIR  Directory where the result files will be stored
+```bash
+taranys analyze-schema \
+-input schema_dir \
+-output output_analyze_schema_dir
+--ouput-allele-annotation annotation_dir
 ```
 
+Example for removing duplicated, subsequences and no CDS alleles:
 
+```bash
+taranys analyze-schema \
+-input schema_dir \
+-output output_analyze_schema_dir \
+--remove-subsets \
+--remove-duplicated \
+--remove-no-cds \
+--ouput-allele-annotation annotation_dir \
+--genus prokka_genus_name \
+--usegenus prokka genus-specific BLAST database \
+--species prokka_species_name \
+--cpus number_of_cpus
+```
+
+### **reference_alleles:**
+
+As a preliminary step to the typing analysis, the representative allele or alleles for each locus in the schema are determined. The selected allele will be the one that shows the least dissimilarity compared to all other known alleles for that locus and can be used to detect, with a certain degree of similarity, all alleles in the schema. Leiden algorithm is used for clusting similar sequences.
+
+Usage:
+
+```bash
+Usage: taranys reference-alleles [OPTIONS]
+
+Options:
+  -s, --schema PATH               Directory where the schema with the core
+                                  gene files are located.   [required]
+  -o, --output PATH               Output folder to save reference alleles
+                                  [required]
+  --eval-cluster / --no-eval-cluster
+                                  Evaluate if the reference alleles match
+                                  against blast with the identity set in eval-
+                                  identity param  [default: eval-cluster]
+  -k, --kmer-size INTEGER         Mash parameter for K-mer size.  [default:
+                                  21]
+  -S, --sketch-size INTEGER       Mash parameter for Sketch size  [default:
+                                  2000]
+  -r, --cluster-resolution FLOAT  Resolution value used for clustering.
+                                  [default: 0.75]
+  -e, --eval-identity FLOAT       Blast percentage identity to use for evaluation of identification.
+                                  [default: 85]
+  --seed INTEGER                  Seed value for clustering
+  --cpus INTEGER                  Number of cpus used for execution  [default:
+                                  1]
+  --force / --no-force            Overwrite the output folder if it exists
+                                  [default: no-force]
+  --help                          Show this message and exit.
+```
+
+Example for reference-alleles using defaults:
+
+```bash
+taranys reference-alleles \
+--schema schema_dir \
+--output output_reference_alleles_dir \
+--eval-cluster \
+--cpus number_of_cpus \
+--force overwrite output dir
+```
+
+Command example changing params:
+
+```bash
+taranys reference-alleles \
+--schema schema_dir \
+--output output_reference_alleles_dir \
+--eval-cluster \
+--kmer-size k-mer size for mash \
+--sketch-size Sketch size for mash \
+--cluster-resolution resolution used for clustering \
+--cpus number_of_cpus \
+--force overwrite output dir
+```
+
+### **allele_calling:**
+
+La llamada de alelos es la función principal de Taranis con la que se realiza la tipificación propiamente dicha. Utilizando este módulo se identifican los locus del esquema presentes en las muestras analizadas. Para ello se utilizan como query los alelos de referencia identificados anteriormente y se realiza un alineamiento con blast utilizando como base de datos los ensamblados en formato fasta. Este alineamiento nos permite obtener el alelo que está presente en la muestra, realizando una clasificación basada en las categorías descritas por el software [chewBBACA](https://chewBBACA.readthedocs.io/en/latest/user/modules/AlleleCall.html#outputs).
+
+![allele_calling](assets/allele_calling.png)
+
+Usage:
+
+```bash
+Usage: taranys allele-calling [OPTIONS] ASSEMBLIES...
+
+Options:
+  -s, --schema PATH               Directory where the schema with the core
+                                  gene files are located.   [required]
+  -r, --reference PATH            Directory where the schema reference allele
+                                  files are located.   [required]
+  -a, --annotation PATH           Annotation file.   [required]
+  -t, --hit_lenght_perc FLOAT     Threshold value to consider in blast hit
+                                  percentage regarding the reference length.
+                                  Values from 0 to 1. [default:
+                                  0.8]
+  -p, --perc-identity INTEGER     Percentage of identity to consider in blast.
+                                  [default: 85]
+  -o, --output PATH               Output folder to save reference alleles
+                                  [required]
+  --force / --no-force            Overwrite the output folder if it exists
+                                  [default: no-force]
+  --snp / --no-snp                Create SNP file for alleles in assembly in
+                                  relation with reference allele  [default:
+                                  no-snp]
+  --alignment / --no-alignment    Create alignment files  [default: no-
+                                  alignment]
+  -q, --proteine-threshold INTEGER
+                                  Threshold of protein coverage to consider as
+                                  TPR  [default: 80]
+  -i, --increase-sequence INTEGER
+                                  Increase the number of triplet sequences to
+                                  find the stop codon  [default: 20]
+  --cpus INTEGER                  Number of cpus used for execution  [default:
+                                  1]
+  --help                          Show this message and exit.
+```
+  
+Command example for allele calling using defaults:
+
+```bash
+taranys allele-calling \
+-s schema_dir \
+-a annotation_file \
+-r reference_alleles_dir \
+-o output_allele_calling_dir \
+--snp \
+--cpus 10 \
+samples_dir
+```
+
+Allele calling for blast and threshold settings:
+
+```bash
+taranys allele_calling \
+-s schema_dir \
+-a annotation_file \
+-r reference_alleles_dir \
+-o output_allele_calling_dir \
+-t coverage threshold to consider in blast \
+-p percentage of identity to consider in blast \
+-q threshold to consider as TPR \
+-i increase number of nucleotides to find stop codon \
+--snp Create SNP file \
+--cpus 10 \
+--alignment\
+samples_dir 
+```
+
+### **distance_matrix:**
+
+The similarity between two or more genomes is estimated by comparing their respective allelic profiles and calculating the total number of differing alleles. These allelic differences between genomes are obtained by generating a distance matrix using the distance_matrix module, which takes as input the allele matrix resulting from the allele_calling process. The Hamming distance is then calculated between pairs of samples.
+
+Usage:
+
+```bash
+Usage: taranys distance-matrix [OPTIONS]
+
+Options:
+  -a, --alleles PATH              Alleles matrix file from which to obtain
+                                  distances between samples  [required]
+  -o, --output PATH               Output folder to save distance matrix
+                                  [required]
+  --force / --no-force            Overwrite the output folder if it exists
+                                  [default: no-force]
+  -l, --locus-missing-threshold INTEGER
+                                  Maximum percentaje of missing values a locus
+                                  can have, otherwise is filtered. By default
+                                  core genome is calculated, locus must be
+                                  found in all samples.  [default: 0]
+  -s, --sample-missing-threshold INTEGER
+                                  Maximum percentaje for missing values a
+                                  sample can have, otherwise it is filtered
+                                  [default: 20]
+  --paralog-filter / --no-paralog-filter
+                                  Consider paralog tags (NIPH, NIPHEM) as
+                                  missing values.  [default: paralog-filter]
+  --lnf-filter / --no-lnf-filter  Consider LNF as missing values.  [default:
+                                  lnf-filter]
+  --plot-filter / --no-plot-filter
+                                  Consider PLOT as missing values.  [default:
+                                  plot-filter]
+  --help                          Show this message and exit.
+```
+
+Command example:
+
+```bash
+taranys distance-matrix \
+-alleles allele_calling_match.csv file \
+--output distance_matrix_dir
+--force overwrite output folder
+```
+
+Distance matrix with threshold settings:
+
+```bash
+taranys distance-matrix \
+--alleles allele_calling_match.csv file \
+--output distance_matrix_dir
+--locus-missing-threshold threshold for missing locus \
+--sample-missing-threshold threshold for missing samples \
+--paralog-filter \
+--lnf-filter \
+--plot-filter \
+--force overwrite output folder
+```
 
 ## Output
 
-- **analyze_schema mode:**
+- **analyze_schema:**
 
-  * **FOLDERS:**
+  - **FOLDERS and FILES structure:**
+
+    - **new_schema**  Contains the new schema.
+    - **prokka** Contains prokka results
+    - **statistics** Statistics data
+      - **graphics** Plot graphics folder
+      - **statistics.csv** Quality statistics showing the following data:
+        - allele_name,
+        - min_length,
+        - max_length,
+        - num_alleles,
+        - mean_length,
+        - good_percent,
+        - not a start codon,
+        - not a stop codon,
+        - Extra in frame stop codon,
+        - is not a multiple of three,
+        - Duplicate allele,
+        - Sub set allele
+
+    - **allele_annotation.tar.gz** Annotation schema file to be inputted in allele calling module.
+
+- **reference_alleles:**
+
+  - **FOLDERS and FILES structure:**
   
-    * **raw_schema_information:**  General information about each allele of each locus
+    - **Clusters** Contains the cluster allele files
+      - **[cluster_alleles].txt** cluster allele file
+    - **evaluate_cluster**
+      - **cluster_evaluation.csv** Evaluation result with the following info:
+        - Locus name
+        - cluster number
+        - result
+        - alleles not match in blast
+        - alleles not found in cluster
 
-  * **FILES:**
-  
-    * **alleles_subsets.tsv:** Report of alleles that are subsequences of other alleles of the same locus
-    * **duplicated_alleles.tsv:** Report of duplicate alleles within the same locus
-    * **length_statistics.tsv:** Allele length statistics report for each locus
-    * **schema_quality.tsv:** Quality report of alleles of each locus
+      - **cluster_per_locus.csv** Number of cluster per locus
+        - number of clusters
+        - number of locus
 
+      - **cluster_summary.csv** summary data with the following info:
+        - Locus name
+        - cluster number
+        - average
+        - center allele
+        - number of sequences
 
-- **reference_alleles mode:**
+    - **graphics** Plot graphics folder
+      - **num_genes_per_allele.png** Bar graphic to show the number of clusters per gene
 
-  * **FILES:**
-  
-    * **[refalleles_locusX].fasta:** One fasta file for each schema locus containing reference alleles for that locus
+    - **[ref_alleles_locusX].fasta:** One fasta file for each schema locus containing reference alleles for that locus
 
+- **allele_calling:**
 
-- **allele_calling mode:**
+  - **FOLDERS and FILES structure:**
+    - **alignments:** Nucleotide alignment between sequence found in the sample and allele
+      - **[locus_name].txt** One file per locus
+      - **[locus_name]_multiple_alignment.aln** One file per locus
+    - **graphics** Graphics per type of allele classification
+      - **ALM_graphic.pnd** Number of ALM in samples.
+      - **ASM_graphic.pnd** Number of ASM in samples.
+      - **EXEC_graphic.pnd** Number of EXEC in samples.
+      - **INF_graphic.pnd** Number of INF in samples.
+      - **LNF_graphic.pnd** Number of LNF in samples.
+      - **NIPHEM_graphic.pnd** Number of NIPHEM in samples.
+      - **NIPH_graphic.pnd** Number of NIPH in samples.
+      - **PLOT_graphic.pnd** Number of PLOT in samples.
+      - **TPR_graphic.pnd** Number of TPR in samples.
+    - **[locus_name]_snp_data.csv** One file per sample
+    - **allele_calling_match.csv** Contains the classification for each locus and for all samples
+    - **allele_calling_summary.csv** Contains the number of each classification per samples
+    - **matching_contig.csv** Summary for each locus in sample with the following data:
+      - sample
+      - contig
+      - core gene
+      - reference allele name
+      - codification
+      - query length
+      - match length
+      - contig length
+      - contig start
+      - contig stop
+      - direction
+      - gene notation
+      - product notation
+      - reference allele quality
+      - protein conversion result
+      - match sequence reference
+      - allele sequence
+      - predicted protein sequence
 
-  * **FOLDERS:**
-    * **alignments:** Nucleotide alignment between sequence found in the sample and allele
-    * **proteins:** Protein alignment between sequence found in sample and allele
-    * **plots:** Interactive pie charts of allele call results for each sample
+- **distance_matrix:**
 
-  * **FILES:**
-    * **alm.tsv:** Sample sequences found x% larger than the locus alleles mean length report
-    * **asm.tsv:** Sample sequences found x% shorter than the locus alleles mean length report
-    * **exact.tsv:** Exact matches report
-    * **inferred_alleles.tsv:** New inferred alleles report
-    * **lnf_tpr.tsv:** Locus not found (LNF) and truncated protein (TPR) report
-    * **paralog.tsv:** Possible paralogs (NIPHEM (100% ID paralogs) and NIPH (<=100% ID paralogs)) report
-    * **plot.tsv:** Possible loci on the tip of the sample contig (PLOT) report
-    * **snp.tsv:** SNPs report
-    * **matching_contigs.tsv:** Summary report of loci found in samples
-    * **result.tsv:** Allele calling main results
-    * **summary_result.tsv:** Allele calling results summary. Count of each tag type found for each sample is indicated
-    * **stprofile.tsv:** Sequence type report 
-
-
-- **distance_matrix mode:**
-
-  * **FILES:**
-    * **filtered_result.tsv:** Filtered allele calling matrix filtered
-    * **matrix_distance.tsv:** Samples matrix distance
-    * **matrix_distance_filter_report.tsv:** Allele calling matrix filtering report
-    
- 
- 
-## Illustrated pipeline
-
-Under construction
+  - **FILES:**
+    - **allele_matrix_fil.tsv:** Filtered allele calling matrix filtered
+    - **distance_matrix_core.tsv:** distance matrix with only core genome (only locus present in all samples)
+    - **distance_matrix.tsv:** distance matrix with all locus present in the schema
