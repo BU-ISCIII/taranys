@@ -146,7 +146,7 @@ def taranys_cli(verbose, log_file):
     required=True,
     multiple=False,
     type=click.Path(),
-    help="Directory where the schema with the core gene files are located. ",
+    help="Directory where the schema with the core gene files are located.",
 )
 @click.option(
     "-o",
@@ -160,43 +160,50 @@ def taranys_cli(verbose, log_file):
     "--remove-subset/--no-remove-subset",
     required=False,
     default=False,
+    show_default=True,
     help="Remove allele subsequences from the schema.",
 )
 @click.option(
     "--remove-duplicated/--no-remove-duplicated",
     required=False,
     default=False,
+    show_default=True,
     help="Remove duplicated subsequences from the schema.",
 )
 @click.option(
     "--remove-no-cds/--no-remove-no-cds",
     required=False,
     default=False,
+    show_default=True,
     help="Remove no CDS alleles from the schema.",
 )
 @click.option(
     "--output-allele-annot/--no-output-allele-annot",
     required=False,
     default=True,
-    help="output prokka/allele annotation for all alleles in locus",
+    show_default=True,
+    help="output prokka/allele annotation for all alleles in locus.",
 )
 @click.option(
     "--genus",
     required=False,
     default="Genus",
-    help="Genus name for Prokka schema genes annotation. Default is Genus.",
+    show_default=True,
+    help="Genus name for Prokka schema genes annotation.",
 )
 @click.option(
     "--species",
     required=False,
     default="species",
-    help="Species name for Prokka schema genes annotation. Default is species",
+    show_default=True,
+    help="Species name for Prokka schema genes annotation.",
 )
 @click.option(
     "--usegenus",
     required=False,
     default="Genus",
-    help="Use genus-specific BLAST databases for Prokka schema genes annotation (needs --genus). Default is False.",
+    show_default=True,
+    help="Use genus-specific BLAST databases for Prokka schema genes annotation (needs --genus).",
 )
 @click.option(
     "--cpus",
@@ -204,7 +211,8 @@ def taranys_cli(verbose, log_file):
     multiple=False,
     type=int,
     default=1,
-    help="Number of cpus used for execution",
+    show_default=True,
+    help="Number of cpus used for execution.",
 )
 def analyze_schema(
     input: str,
@@ -277,6 +285,7 @@ def analyze_schema(
     "--eval-cluster/--no-eval-cluster",
     required=False,
     default=True,
+    show_default=True,
     help="Evaluate if the reference alleles match against blast with the identity set in eval-identity param",
 )
 @click.option(
@@ -285,6 +294,7 @@ def analyze_schema(
     required=False,
     type=int,
     default=21,
+    show_default=True,
     help="Mash parameter for K-mer size.",
 )
 @click.option(
@@ -293,6 +303,7 @@ def analyze_schema(
     required=False,
     type=int,
     default=2000,
+    show_default=True,
     help="Mash parameter for Sketch size",
 )
 @click.option(
@@ -301,6 +312,7 @@ def analyze_schema(
     required=False,
     type=float,
     default=0.75,
+    show_default=True,
     help="Resolution value used for clustering.",
 )
 @click.option(
@@ -309,13 +321,15 @@ def analyze_schema(
     required=False,
     type=float,
     default=85,
-    help="Resolution value used for clustering.",
+    show_default=True,
+    help="Blast percentage identity to use for evaluation of identification.",
 )
 @click.option(
     "--seed",
     required=False,
     type=int,
     default=None,
+    show_default=True,
     help="Seed value for clustering",
 )
 @click.option(
@@ -324,12 +338,14 @@ def analyze_schema(
     multiple=False,
     type=int,
     default=1,
+    show_default=True,
     help="Number of cpus used for execution",
 )
 @click.option(
     "--force/--no-force",
     required=False,
     default=False,
+    show_default=True,
     help="Overwrite the output folder if it exists",
 )
 def reference_alleles(
@@ -417,17 +433,19 @@ def reference_alleles(
     required=False,
     nargs=1,
     default=0.8,
+    show_default=True,
     type=float,
-    help="Threshold value to consider in blast hit percentage regarding the reference length. Values from 0 to 1. default 0.8",
+    help="Threshold value to consider in blast hit percentage regarding the reference length. Values from 0 to 1.",
 )
 @click.option(
     "-p",
     "--perc-identity",
     required=False,
     nargs=1,
-    default=90,
+    default=85,
+    show_default=True,
     type=int,
-    help="Percentage of identity to consider in blast. default 90",
+    help="Percentage of identity to consider in blast.",
 )
 @click.option(
     "-o",
@@ -441,6 +459,7 @@ def reference_alleles(
     "--force/--no-force",
     required=False,
     default=False,
+    show_default=True,
     help="Overwrite the output folder if it exists",
 )
 @click.argument(
@@ -454,12 +473,14 @@ def reference_alleles(
     "--snp/--no-snp",
     required=False,
     default=False,
+    show_default=True,
     help="Create SNP file for alleles in assembly in relation with reference allele",
 )
 @click.option(
     "--alignment/--no-alignment",
     required=False,
     default=False,
+    show_default=True,
     help="Create alignment files",
 )
 @click.option(
@@ -468,8 +489,9 @@ def reference_alleles(
     required=False,
     nargs=1,
     default=80,
+    show_default=True,
     type=int,
-    help="Threshold of protein coverage to consider as TPR. default 90",
+    help="Threshold of protein coverage to consider as TPR",
 )
 @click.option(
     "-i",
@@ -477,8 +499,9 @@ def reference_alleles(
     required=False,
     nargs=1,
     default=20,
+    show_default=True,
     type=int,
-    help="Increase the number of triplet sequences to find the stop codon. default 20",
+    help="Increase the number of triplet sequences to find the stop codon",
 )
 @click.option(
     "--cpus",
@@ -486,6 +509,7 @@ def reference_alleles(
     multiple=False,
     type=int,
     default=1,
+    show_default=True,
     help="Number of cpus used for execution",
 )
 def allele_calling(
@@ -591,6 +615,7 @@ def allele_calling(
     "--force/--no-force",
     required=False,
     default=False,
+    show_default=True,
     help="Overwrite the output folder if it exists",
 )
 @click.option(
@@ -600,6 +625,7 @@ def allele_calling(
     multiple=False,
     type=int,
     default=0,
+    show_default=True,
     help="Maximum percentaje of missing values a locus can have, otherwise is filtered. By default core genome is calculated, locus must be found in all samples.",
 )
 @click.option(
@@ -609,6 +635,7 @@ def allele_calling(
     multiple=False,
     type=int,
     default=20,
+    show_default=True,
     help="Maximum percentaje for missing values a sample can have, otherwise it is filtered",
 )
 @click.option(
@@ -617,7 +644,8 @@ def allele_calling(
     multiple=False,
     type=bool,
     default=True,
-    help="Consider paralog tags (NIPH, NIPHEM) as missing values. Default is True",
+    show_default=True,
+    help="Consider paralog tags (NIPH, NIPHEM) as missing values.",
 )
 @click.option(
     "--lnf-filter/--no-lnf-filter",
@@ -625,7 +653,8 @@ def allele_calling(
     multiple=False,
     type=bool,
     default=True,
-    help="Consider LNF as missing values. Default is True",
+    show_default=True,
+    help="Consider LNF as missing values.",
 )
 @click.option(
     "--plot-filter/--no-plot-filter",
@@ -633,7 +662,8 @@ def allele_calling(
     multiple=False,
     type=bool,
     default=True,
-    help="Consider PLOT as missing values. Default is True",
+    show_default=True,
+    help="Consider PLOT as missing values.",
 )
 def distance_matrix(
     alleles: str,
