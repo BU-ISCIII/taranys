@@ -10,7 +10,7 @@ from Bio import SeqIO
 
 from collections import OrderedDict, defaultdict
 
-import taranis.utils
+import taranys.utils
 
 
 log = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ stderr = rich.console.Console(
     stderr=True,
     style="dim",
     highlight=False,
-    force_terminal=taranis.utils.rich_force_colors(),
+    force_terminal=taranys.utils.rich_force_colors(),
 )
 
 
@@ -104,7 +104,7 @@ class AnalyzeSchema:
                 allele_seq[record.id] = str(record.seq)
                 a_quality[record.id]["length"] = str(len(str(record.seq)))
                 a_quality[record.id]["dna_seq"] = str(record.seq)
-                sequence_direction = taranis.utils.get_seq_direction(str(record.seq))
+                sequence_direction = taranys.utils.get_seq_direction(str(record.seq))
 
                 if sequence_direction == "reverse":
                     record.seq = record.seq.reverse_complement()
@@ -169,7 +169,7 @@ class AnalyzeSchema:
                     bad_quality_record.append(rec_id)
 
         new_schema_folder = os.path.join(self.output, "new_schema")
-        _ = taranis.utils.create_new_folder(new_schema_folder)
+        _ = taranys.utils.create_new_folder(new_schema_folder)
         new_schema_file = os.path.join(new_schema_folder, self.allele_name + ".fasta")
         with open(self.schema_allele, "r") as _:
             with open(new_schema_file, "w") as fo:
@@ -205,7 +205,7 @@ class AnalyzeSchema:
             a_length.append(int(a_quality[record_id]["length"]))
             if a_quality[record_id]["quality"] == "Bad quality":
                 bad_quality_counter += 1
-                for reason in taranis.utils.POSIBLE_BAD_QUALITY:
+                for reason in taranys.utils.POSIBLE_BAD_QUALITY:
                     if reason in a_quality[record_id]["reason"]:
                         bad_quality_reason[reason] = (
                             bad_quality_reason.get(reason, 0) + 1
@@ -218,7 +218,7 @@ class AnalyzeSchema:
         record_data["good_percent"] = round(
             100 * (total_alleles - bad_quality_counter) / total_alleles, 2
         )
-        for item in taranis.utils.POSIBLE_BAD_QUALITY:
+        for item in taranys.utils.POSIBLE_BAD_QUALITY:
             record_data[item] = (
                 bad_quality_reason[item] if item in bad_quality_reason else 0
             )
@@ -242,11 +242,11 @@ class AnalyzeSchema:
         log.info("Analizing allele %s", self.allele_name)
         # run annotations
         prokka_folder = os.path.join(self.output, "prokka", self.allele_name)
-        anotation_files = taranis.utils.create_annotation_files(
+        anotation_files = taranys.utils.create_annotation_files(
             self.schema_allele, prokka_folder, self.allele_name, cpus=self.prokka_cpus
         )
         log.info("Fetching anotation information for %s", self.allele_name)
-        prokka_annotation = taranis.utils.read_annotation_file(anotation_files + ".gff")
+        prokka_annotation = taranys.utils.read_annotation_file(anotation_files + ".gff")
 
         # Perform quality
         a_quality = self.check_allele_quality(prokka_annotation)
@@ -307,13 +307,13 @@ def collect_statistics(data, out_folder, output_allele_annot):
         log.info("Creating graphics")
         allele_range = [0, 300, 600, 1000, 1500]
         graphic_folder = os.path.join(stats_folder, "graphics")
-        _ = taranis.utils.create_new_folder(graphic_folder)
+        _ = taranys.utils.create_new_folder(graphic_folder)
 
         # create graphic for alleles/number of genes
         group_alleles_df = stats_df.groupby(
             pd.cut(stats_df["num_alleles"], allele_range), observed=False
         ).count()
-        _ = taranis.utils.create_graphic(
+        _ = taranys.utils.create_graphic(
             graphic_folder,
             "num_genes_per_allele.png",
             "bar",
@@ -325,12 +325,12 @@ def collect_statistics(data, out_folder, output_allele_annot):
 
         sum_all_alleles = stats_df["num_alleles"].sum()
 
-        labels = taranis.utils.POSIBLE_BAD_QUALITY
+        labels = taranys.utils.POSIBLE_BAD_QUALITY
         values = [stats_df[item].sum() for item in labels]
 
         labels.append("Good quality")
         values.append(sum_all_alleles - sum(values))
-        _ = taranis.utils.create_graphic(
+        _ = taranys.utils.create_graphic(
             graphic_folder,
             "quality_percent.png",
             "pie",
@@ -340,7 +340,7 @@ def collect_statistics(data, out_folder, output_allele_annot):
             "Quality percent",
         )
         # create box plot for allele length variability
-        _ = taranis.utils.create_graphic(
+        _ = taranys.utils.create_graphic(
             graphic_folder,
             "allele_variability.png",
             "box",
@@ -358,8 +358,8 @@ def collect_statistics(data, out_folder, output_allele_annot):
 
     stats_df = pd.DataFrame(summary_data)
     stats_folder = os.path.join(out_folder, "statistics")
-    _ = taranis.utils.create_new_folder(stats_folder)
-    _ = taranis.utils.write_data_to_file(stats_folder, "statistics.csv", stats_df)
+    _ = taranys.utils.create_new_folder(stats_folder)
+    _ = taranys.utils.write_data_to_file(stats_folder, "statistics.csv", stats_df)
     stats_graphics(stats_folder)
 
     if output_allele_annot:
@@ -401,7 +401,7 @@ def collect_statistics(data, out_folder, output_allele_annot):
                     + ",".join(data_field)
                     + "\n"
                 )
-        _ = taranis.utils.write_data_to_compress_filed(
+        _ = taranys.utils.write_data_to_compress_filed(
             out_folder, "allele_annotation.csv", ann_data
         )
     return

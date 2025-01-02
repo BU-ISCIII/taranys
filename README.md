@@ -1,4 +1,4 @@
-# Taranis
+# taranys
 
 - [Introduction](#introduction)
 - [Dependencies](#dependencies)
@@ -12,9 +12,9 @@
 
 ## Introduction
 
-**Taranis** is a computational stand-alone pipeline for **gene-by-gene allele calling analysis** based on BLASTn using  whole genome (wg) and core genome (cg) multilocus sequence typing (MLST) schemas on complete or draft genomes resulting from de novo assemblers, while tracking helpful and informative data among the process.
+**taranys** is a computational stand-alone pipeline for **gene-by-gene allele calling analysis** based on BLASTn using  whole genome (wg) and core genome (cg) multilocus sequence typing (MLST) schemas on complete or draft genomes resulting from de novo assemblers, while tracking helpful and informative data among the process.
 
-Taranis includes four main functionalities: MLST **schema analysis**, gene-by-gene **allele calling**, **reference alleles** obtainment for allele calling analysis and the final **distance matrix** construction.
+taranys includes four main functionalities: MLST **schema analysis**, gene-by-gene **allele calling**, **reference alleles** obtainment for allele calling analysis and the final **distance matrix** construction.
 
 ## Dependencies
 
@@ -34,9 +34,9 @@ Taranis includes four main functionalities: MLST **schema analysis**, gene-by-ge
 
 Install all dependencies and add them to $PATH.
 
-`git clone https://github.com/BU-ISCIII/taranis.git`
+`git clone https://github.com/BU-ISCIII/taranys.git`
 
-Add taranis and ./bin to $PATH.
+Add taranys and ./bin to $PATH.
 
 #### Install using conda
 
@@ -44,7 +44,7 @@ This option is recomended.
 
 Install Anaconda3.
 
-`conda install -c conda-forge -c bioconda -c defaults taranis`
+`conda install -c conda-forge -c bioconda -c defaults taranys`
 
 Wait for the environment to solve. <br>
 Ignore warnings/errors.
@@ -56,7 +56,7 @@ Ignore warnings/errors.
   Schema analysis:
 
 ```
-taranis analyze_schema \
+taranys analyze_schema \
 -inputdir schema_dir \
 -output output_analyze_schema_dir
 --ouput-allele-annotation annotation_dir
@@ -65,7 +65,7 @@ taranis analyze_schema \
   Schema analysis for removing duplicated, subsequences and no CDS alleles:
 
 ```
-taranis analyze_schema \
+taranys analyze_schema \
 -inputdir schema_dir \
 -output output_analyze_schema_dir \
 --remove-subsets \
@@ -84,7 +84,7 @@ taranis analyze_schema \
   Get reference alleles:
 
 ```
-taranis reference_alleles \
+taranys reference_alleles \
 -s schema_dir \
 -o output_reference_alleles_dir \
 --eval-cluster \
@@ -95,7 +95,7 @@ taranis reference_alleles \
   Reference alleles with clustering settings:
 
 ```
-taranis reference_alleles \
+taranys reference_alleles \
 -s schema_dir \
 -o output_reference_alleles_dir \
 --eval-cluster \
@@ -111,7 +111,7 @@ taranis reference_alleles \
   Run allele calling:
 
 ```
-taranis allele_calling \
+taranys allele_calling \
 -s schema_dir \
 -a annotation_file \
 -r reference_alleles_dir \
@@ -129,7 +129,7 @@ samples_dir
   Allele calling for blast and threshold settings:
 
 ```
-taranis allele_calling \
+taranys allele_calling \
 -s schema_dir \
 -a annotation_file \
 -r reference_alleles_dir \
@@ -149,7 +149,7 @@ samples_dir
   Get distance matrix:
 
 ```
-taranis distance_matrix \
+taranys distance_matrix \
 -a allele_calling_match.csv file \
 -o distance_matrix_dir
 --force overwrite output folder
@@ -158,7 +158,7 @@ taranis distance_matrix \
 Distance matrix with threshold settings:
 
 ```
-taranis distance_matrix \
+taranys distance_matrix \
 -a allele_calling_match.csv file \
 -o distance_matrix_dir
 -l threshold for missing locus \
@@ -174,7 +174,7 @@ taranis distance_matrix \
 - **analyze_schema mode:**
 
 ```
-Usage: taranis analyze-schema [OPTIONS]
+Usage: taranys analyze-schema [OPTIONS]
 
 Options:
   -i, --inputdir PATH             Directory where the schema with the core
@@ -205,7 +205,7 @@ Options:
 - **reference_alleles mode:**
 
 ```
-Usage: taranis reference-alleles [OPTIONS]
+Usage: taranys reference-alleles [OPTIONS]
 
 Options:
   -s, --schema PATH               Directory where the schema with the core
@@ -227,7 +227,7 @@ Options:
 - **allele_calling mode:**
 
 ```
-Usage: taranis allele-calling [OPTIONS] ASSEMBLIES...
+Usage: taranys allele-calling [OPTIONS] ASSEMBLIES...
 
 Options:
   -s, --schema PATH               Directory where the schema with the core
@@ -258,7 +258,7 @@ Options:
 - **distance_matrix mode:**
 
 ```
-Usage: taranis distance-matrix [OPTIONS]
+Usage: taranys distance-matrix [OPTIONS]
 
 Options:
   -a, --alleles PATH              Alleles matrix file from which to obtain

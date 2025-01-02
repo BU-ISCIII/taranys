@@ -4,8 +4,8 @@ import logging
 import os
 import rich.console
 
-import taranis.utils
-import taranis.blast
+import taranys.utils
+import taranys.blast
 
 from collections import OrderedDict
 from pathlib import Path
@@ -18,7 +18,7 @@ stderr = rich.console.Console(
     stderr=True,
     style="dim",
     highlight=False,
-    force_terminal=taranis.utils.rich_force_colors(),
+    force_terminal=taranys.utils.rich_force_colors(),
 )
 
 
@@ -55,7 +55,7 @@ class AlleleCalling:
         """
         self.prediction_data = annotation  # store prediction annotation
         self.sample_file = sample_file
-        self.sample_contigs = taranis.utils.read_fasta_file(
+        self.sample_contigs = taranys.utils.read_fasta_file(
             self.sample_file, convert_to_dict=True
         )
         self.schema = schema
@@ -66,7 +66,7 @@ class AlleleCalling:
         self.s_name = Path(sample_file).stem
         self.blast_dir = os.path.join(out_folder, "blastdb")
         # create blast for sample file
-        self.blast_obj = taranis.blast.Blast("nucl")
+        self.blast_obj = taranys.blast.Blast("nucl")
         _ = self.blast_obj.create_blastdb(sample_file, self.blast_dir)
         # store inferred allele object
         self.inf_alle_obj = inf_alle_obj
@@ -156,7 +156,7 @@ class AlleleCalling:
                     extended_end = min(len(contig_seq), end + i)
 
                 extended_seq = contig_seq[extended_start:extended_end]
-                _, protein, error, error_details = taranis.utils.convert_to_protein(
+                _, protein, error, error_details = taranys.utils.convert_to_protein(
                     extended_seq, force_coding=True
                 )
                 i += 3
@@ -229,7 +229,7 @@ class AlleleCalling:
             match_sequence = split_blast_result[13].replace("-", "")
             # check if the sequence is coding
             direction, protein, prot_error, prot_error_details = (
-                taranis.utils.convert_to_protein(match_sequence, force_coding=True)
+                taranys.utils.convert_to_protein(match_sequence, force_coding=True)
             )
             # get blast details
             allele_details = OrderedDict(
@@ -343,11 +343,11 @@ class AlleleCalling:
                 "is not a multiple of three" in sample_allele_data["prot_error_details"]
             ):
 
-                if taranis.utils.has_start_codon(
+                if taranys.utils.has_start_codon(
                     sample_allele_data["sample_allele_seq"]
                 ):
                     search = "3_prime"
-                elif taranis.utils.has_stop_codon(
+                elif taranys.utils.has_stop_codon(
                     sample_allele_data["sample_allele_seq"]
                 ):
                     search = "5_prime"
@@ -544,7 +544,7 @@ class AlleleCalling:
                 f"Processing allele {ref_allele}: {count} of {len(self.ref_alleles)}"
             )
 
-            alleles = taranis.utils.read_fasta_file(ref_allele, convert_to_dict=True)
+            alleles = taranys.utils.read_fasta_file(ref_allele, convert_to_dict=True)
             match_found = False
             count_2 = 0
             for r_id, r_seq in alleles.items():
@@ -617,19 +617,19 @@ class AlleleCalling:
 
                 if self.snp_request and result["allele_type"][locus_name] != "LNF":
                     # run snp analysis
-                    result["snp_data"][locus_name] = taranis.utils.get_snp_information(
+                    result["snp_data"][locus_name] = taranys.utils.get_snp_information(
                         ref_allele_seq, allele_seq, ref_allele_name
                     )
 
                 if self.aligment_request and result["allele_type"][locus_name] != "LNF":
                     # run alignment analysis
                     result["alignment_data"][locus_name] = (
-                        taranis.utils.get_alignment_data(
+                        taranys.utils.get_alignment_data(
                             ref_allele_seq, allele_seq, ref_allele_name
                         )
                     )
         # delete blast folder
-        _ = taranis.utils.delete_folder(os.path.join(self.blast_dir, self.s_name))
+        _ = taranys.utils.delete_folder(os.path.join(self.blast_dir, self.s_name))
         return result
 
 
@@ -712,7 +712,7 @@ def create_multiple_alignment(
         input_buffer.seek(0)
 
         allele_multiple_align.append(
-            taranis.utils.get_multiple_alignment(input_buffer, mafft_cpus)
+            taranys.utils.get_multiple_alignment(input_buffer, mafft_cpus)
         )
         # release memory
         input_buffer.close()
@@ -765,7 +765,7 @@ def collect_data(
             classif_data[allele_type] = []
         graphic_folder = os.path.join(stats_folder, "graphics")
 
-        _ = taranis.utils.create_new_folder(graphic_folder)
+        _ = taranys.utils.create_new_folder(graphic_folder)
         s_list = []
         # collecting data to create graphics
         for sample, classif_counts in summary_result.items():
@@ -774,7 +774,7 @@ def collect_data(
                 classif_data[classif].append(int(count))
         # create graphics per each classification type
         for allele_type, counts in classif_data.items():
-            _ = taranis.utils.create_graphic(
+            _ = taranys.utils.create_graphic(
                 graphic_folder,
                 str(allele_type + "_graphic.png"),
                 "bar",
@@ -907,7 +907,7 @@ def collect_data(
     # create alignment files
     if aligment_request:
         alignment_folder = os.path.join(output, "alignments")
-        _ = taranis.utils.create_new_folder(alignment_folder)
+        _ = taranys.utils.create_new_folder(alignment_folder)
         align_collection = {}
         for result in results:
             for sample, values in result.items():

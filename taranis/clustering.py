@@ -3,15 +3,15 @@ import logging
 import numpy as np
 import rich.console
 
-import taranis.seq_cluster
-import taranis.utils
+import taranys.seq_cluster
+import taranys.utils
 
 log = logging.getLogger(__name__)
 stderr = rich.console.Console(
     stderr=True,
     style="dim",
     highlight=False,
-    force_terminal=taranis.utils.rich_force_colors(),
+    force_terminal=taranys.utils.rich_force_colors(),
 )
 
 
@@ -144,7 +144,7 @@ class ClusterDistance:
             matrix indexes adn second the statistics data for each cluster
         """
         self.resolution = resolution
-        seq_cluster_obj = taranis.seq_cluster.SeqCluster(self.resolution, self.seed)
+        seq_cluster_obj = taranys.seq_cluster.SeqCluster(self.resolution, self.seed)
         cluster_ptrs = seq_cluster_obj.cluster_seqs(self.dist_matrix)
         clusters_data = self.collect_data_cluster(cluster_ptrs)
         return [cluster_ptrs, clusters_data]

@@ -4,10 +4,10 @@ import rich.console
 from pathlib import Path
 import os
 
-import taranis.utils
-import taranis.distance
-import taranis.clustering
-import taranis.eval_cluster
+import taranys.utils
+import taranys.distance
+import taranys.clustering
+import taranys.eval_cluster
 from Bio import SeqIO
 
 log = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ stderr = rich.console.Console(
     stderr=True,
     style="dim",
     highlight=False,
-    force_terminal=taranis.utils.rich_force_colors(),
+    force_terminal=taranys.utils.rich_force_colors(),
 )
 
 
@@ -62,7 +62,7 @@ class ReferenceAlleles:
             dict: position to allele name
         """
         log.debug("Processing distance matrix for $s", self.fasta_file)
-        distance_obj = taranis.distance.DistanceMatrix(
+        distance_obj = taranys.distance.DistanceMatrix(
             self.fasta_file, self.kmer_size, self.sketch_size
         )
         mash_distance_df = distance_obj.create_matrix()
@@ -91,7 +91,7 @@ class ReferenceAlleles:
             cluster_ptrs, position_to_allele
         )
         cluster_folder = os.path.join(self.output, "Clusters")
-        _ = taranis.utils.create_new_folder(cluster_folder)
+        _ = taranys.utils.create_new_folder(cluster_folder)
         cluster_file = os.path.join(
             cluster_folder, "cluster_alleles_" + self.locus_name + ".txt"
         )
@@ -137,9 +137,9 @@ class ReferenceAlleles:
             dict: containg statistics information for each cluster, and
             optionally a list of evaluation cluster results
         """
-        self.records = taranis.utils.read_fasta_file(self.fasta_file)
+        self.records = taranys.utils.read_fasta_file(self.fasta_file)
         dist_matrix_np, position_to_allele = self.create_distance_matrix()
-        self.cluster_obj = taranis.clustering.ClusterDistance(
+        self.cluster_obj = taranys.clustering.ClusterDistance(
             dist_matrix=dist_matrix_np,
             ref_seq_name=self.locus_name,
             dist_value=self.eval_id / 100,
@@ -159,7 +159,7 @@ class ReferenceAlleles:
 
             # evaluate clusters aginst blast results
             stderr.print(f"Evaluating clusters for {self.locus_name}")
-            evaluation_obj = taranis.eval_cluster.EvaluateCluster(
+            evaluation_obj = taranys.eval_cluster.EvaluateCluster(
                 self.fasta_file, self.locus_name, self.eval_id, self.output
             )
             evaluation_result = evaluation_obj.evaluate_clusters(
@@ -207,7 +207,7 @@ def parallel_execution(
         cluster_resolution (float): resolution for clustering
         seed (int): seed for random number generator
     """
-    ref_alleles_obj = taranis.reference_alleles.ReferenceAlleles(
+    ref_alleles_obj = taranys.reference_alleles.ReferenceAlleles(
         fasta_file,
         output,
         eval_cluster,
@@ -242,9 +242,9 @@ def collect_statistics(data_alleles: list, eval_cluster: bool, out_folder: str) 
         stderr.print("Creating graphics")
         log.info("Creating graphics")
         graphic_folder = os.path.join(stats_folder, "graphics")
-        _ = taranis.utils.create_new_folder(graphic_folder)
+        _ = taranys.utils.create_new_folder(graphic_folder)
         cluster, alleles = zip(*cluster_alleles.items())
-        _ = taranis.utils.create_graphic(
+        _ = taranys.utils.create_graphic(
             graphic_folder,
             "num_clusters_per_locus.png",
             "bar",

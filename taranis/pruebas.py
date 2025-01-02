@@ -4,7 +4,7 @@ from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline
 import subprocess
 
-# import taranis.utils
+# import taranys.utils
 
 import random
 
@@ -12,14 +12,14 @@ import random
     Para hacer las pruebas con alfaclust activo el entorno de conda alfatclust_env
     despues me voy a la carpeta donde me he descargado, de git, alfatclust y
     ejecuto :
-     ./alfatclust.py -i /media/lchapado/Reference_data/proyectos_isciii/taranis/taranis_testing_data/listeria_testing_schema/lmo0003.fasta  -o /media/lchapado/Reference_data/proyectos_isciii/taranis/test/alfacluster_test/resultado_alfaclust_lmo003  -l 0.9
+     ./alfatclust.py -i /media/lchapado/Reference_data/proyectos_isciii/taranys/taranys_testing_data/listeria_testing_schema/lmo0003.fasta  -o /media/lchapado/Reference_data/proyectos_isciii/taranys/test/alfacluster_test/resultado_alfaclust_lmo003  -l 0.9
     despues ejecuto este programa de prueba cambiando los ficheros de resultados
 
 """
 
 # read result of alfatclust
 
-alfa_clust_file = "/media/lchapado/Reference_data/proyectos_isciii/taranis/test/resultado_alfatclust-090"
+alfa_clust_file = "/media/lchapado/Reference_data/proyectos_isciii/taranys/test/resultado_alfatclust-090"
 with open(alfa_clust_file, "r") as fh:
     lines = fh.readlines()
 alleles_found = False
@@ -36,11 +36,11 @@ for line in lines:
         locus_list.append(line)
 
 rand_locus = random.choice(locus_list)
-schema_file = "/media/lchapado/Reference_data/proyectos_isciii/taranis/taranis_testing_data/listeria_testing_schema/lmo0002.fasta"
+schema_file = "/media/lchapado/Reference_data/proyectos_isciii/taranys/taranys_testing_data/listeria_testing_schema/lmo0002.fasta"
 new_schema_file = (
-    "/media/lchapado/Reference_data/proyectos_isciii/taranis/test/cluster_lmo0002.fasta"
+    "/media/lchapado/Reference_data/proyectos_isciii/taranys/test/cluster_lmo0002.fasta"
 )
-q_file = "/media/lchapado/Reference_data/proyectos_isciii/taranis/test/q_file.fasta"
+q_file = "/media/lchapado/Reference_data/proyectos_isciii/taranys/test/q_file.fasta"
 with open(schema_file) as fh:
     with open(new_schema_file, "w") as fo:
         for record in SeqIO.parse(schema_file, "fasta"):
@@ -55,7 +55,7 @@ with open(new_schema_file) as fh:
                 SeqIO.write(record, fo, "fasta")
                 break
 print("Selected locus: ", rand_locus)
-db_name = "/media/lchapado/Reference_data/proyectos_isciii/taranis/test/testing_clster/lmo0002"
+db_name = "/media/lchapado/Reference_data/proyectos_isciii/taranys/test/testing_clster/lmo0002"
 blast_command = [
     "makeblastdb",
     "-in",

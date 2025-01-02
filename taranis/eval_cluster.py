@@ -3,8 +3,8 @@ import logging
 import numpy as np
 import rich.console
 import os
-import taranis.utils
-import taranis.blast
+import taranys.utils
+import taranys.blast
 from Bio import SeqIO
 
 log = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ stderr = rich.console.Console(
     stderr=True,
     style="dim",
     highlight=False,
-    force_terminal=taranis.utils.rich_force_colors(),
+    force_terminal=taranys.utils.rich_force_colors(),
 )
 
 
@@ -30,15 +30,15 @@ class EvaluateCluster:
         self.eval_id = eval_id
 
         self.output = os.path.join(output, "evaluate_cluster")
-        taranis.utils.create_new_folder(self.output)
+        taranys.utils.create_new_folder(self.output)
         # locus_blast_dir = os.path.join(self.output, locus_name)
-        self.blast_obj = taranis.blast.Blast("nucl")
+        self.blast_obj = taranys.blast.Blast("nucl")
         _ = self.blast_obj.create_blastdb(locus_path, self.output)
         return
 
     def delete_blast_db_folder(self):
         """Delete blast db folder"""
-        taranis.utils.delete_folder(os.path.join(self.output, self.locus_name))
+        taranys.utils.delete_folder(os.path.join(self.output, self.locus_name))
 
     def find_cluster_from_ref_allele(self, cluster_ref_alleles: dict) -> dict:
         """Create a dictionary to map de cluster belongs to the reference allele

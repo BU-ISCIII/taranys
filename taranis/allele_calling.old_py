@@ -22,7 +22,7 @@ from Bio.Blast import NCBIXML
 import pandas as pd
 import shutil
 from progressbar import ProgressBar
-from utils.taranis_utils import *
+from utils.taranys_utils import *
 import math
 import csv
 import plotly.graph_objects as go
@@ -2781,7 +2781,7 @@ def update_schema(
                                 + ">"
                                 + str(allele_number)
                                 + " # "
-                                + "INF by Taranis"
+                                + "INF by taranys"
                                 + "\n"
                                 + inf
                                 + "\n"
@@ -2803,7 +2803,7 @@ def update_schema(
                                 + ">"
                                 + complete_inf_id
                                 + " # "
-                                + "INF by Taranis"
+                                + "INF by taranys"
                                 + "\n"
                                 + inf
                                 + "\n"
@@ -2838,7 +2838,7 @@ def update_schema (updateschema, schemadir, storedir, core_gene_list_files, infe
             with open (locus_schema_file, 'a') as core_fh:
                 for inf in inf_list:
                     allele_number += 1
-                    core_fh.write('\n' + '>' + str(allele_number) + ' # ' + 'INF by Taranis' + '\n' + inf + '\n')
+                    core_fh.write('\n' + '>' + str(allele_number) + ' # ' + 'INF by taranys' + '\n' + inf + '\n')
 
     return True
 """
@@ -4148,7 +4148,7 @@ def processing_allele_calling(arguments):
     print("Start the execution at :", start_time)
 
     # Open log file
-    logger = open_log("taranis_wgMLST.log")
+    logger = open_log("taranys_wgMLST.log")
     # print('Checking the pre-requisites.')
 
     ############################################################

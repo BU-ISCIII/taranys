@@ -6,14 +6,14 @@ import subprocess
 import rich
 import sys
 from pathlib import Path
-import taranis.utils
+import taranys.utils
 
 log = logging.getLogger(__name__)
 stderr = rich.console.Console(
     stderr=True,
     style="dim",
     highlight=False,
-    force_terminal=taranis.utils.rich_force_colors(),
+    force_terminal=taranys.utils.rich_force_colors(),
 )
 
 

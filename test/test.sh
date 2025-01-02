@@ -17,7 +17,7 @@ set -e
 #
 #ACKNOLEDGE: longops2getops.sh: https://gist.github.com/adamhotep/895cebf290e95e613c006afbffef09d7
 #
-#DESCRIPTION: test.sh uses test data for testing taranis installation.
+#DESCRIPTION: test.sh uses test data for testing taranys installation.
 #
 #
 #================================================================
@@ -124,18 +124,18 @@ done
 shift $((OPTIND-1))
 
 ## Execute plasmidID with test data.
-echo "Executing:../taranis.py allele_calling -coregenedir $schema -inputdir $assemblies -refgenome $refgenome -outputdir allele_calling_test -percentlength 20 -refalleles $refallele -profile $profile"
+echo "Executing:../taranys.py allele_calling -coregenedir $schema -inputdir $assemblies -refgenome $refgenome -outputdir allele_calling_test -percentlength 20 -refalleles $refallele -profile $profile"
 echo "Assemblies: $assemblies"
 echo "Schema: $schema"
 echo "$PWD"
 cd
-echo "Executing taranis analyze_schema"
-$script_dir/../taranis.py analyze_schema -i $script_dir/MLST_listeria -o analyze_schema_test --output-allele-annot --cpus 1
+echo "Executing taranys analyze_schema"
+$script_dir/../taranys.py analyze_schema -i $script_dir/MLST_listeria -o analyze_schema_test --output-allele-annot --cpus 1
 
-# $script_dir/../taranis.py reference_alleles -coregenedir $script_dir/MLST_listeria -outputdir reference_alleles_test
+# $script_dir/../taranys.py reference_alleles -coregenedir $script_dir/MLST_listeria -outputdir reference_alleles_test
 
-# $script_dir/../taranis.py allele_calling -coregenedir $script_dir/$schema -inputdir $script_dir/$assemblies -refgenome $script_dir/$refgenome -outputdir allele_calling_test -percentlength 20 -refalleles reference_alleles_test -profile $script_dir/$profile
+# $script_dir/../taranys.py allele_calling -coregenedir $script_dir/$schema -inputdir $script_dir/$assemblies -refgenome $script_dir/$refgenome -outputdir allele_calling_test -percentlength 20 -refalleles reference_alleles_test -profile $script_dir/$profile
 
-# $script_dir/../taranis.py distance_matrix -alleles_matrix allele_calling_test/result.tsv -outputdir distance_matrix_test
+# $script_dir/../taranys.py distance_matrix -alleles_matrix allele_calling_test/result.tsv -outputdir distance_matrix_test
 
 echo "ALL DONE. TEST COMPLETED SUCCESSFULLY."

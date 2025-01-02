@@ -16,22 +16,22 @@ jobs:
       - name: Set up Miniconda
         uses: conda-incubator/setup-miniconda@v3
         with:
-          activate-environment: taranis_env
+          activate-environment: taranys_env
           environment-file: environment.yml
 
       - name: Verify Conda environment
         run: conda env list
 
-      - name: Activate env and install taranis
+      - name: Activate env and install taranys
         run: |
           source $CONDA/etc/profile.d/conda.sh
-          conda activate taranis_env
+          conda activate taranys_env
           python -m pip install .
-          taranis analyze-schema -i  test/MLST_listeria/analyze_schema -o analyze_schema_test  --cpus 1 --output-allele-annot --remove-no-cds --remove-duplicated --remove-subset
+          taranys analyze-schema -i  test/MLST_listeria/analyze_schema -o analyze_schema_test  --cpus 1 --output-allele-annot --remove-no-cds --remove-duplicated --remove-subset
 
       - name: Testing Reference allele
         run: |
           source $CONDA/etc/profile.d/conda.sh
-          conda activate taranis_env
-          taranis reference-alleles -s test/MLST_listeria/reference_allele -o reference_allele_test --cpus 1 
+          conda activate taranys_env
+          taranys reference-alleles -s test/MLST_listeria/reference_allele -o reference_allele_test --cpus 1 
           

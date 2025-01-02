@@ -10,19 +10,19 @@ import rich.traceback
 import sys
 import time
 
-import taranis.distance
-import taranis.utils
-import taranis.analyze_schema
-import taranis.reference_alleles
-import taranis.allele_calling
+import taranys.distance
+import taranys.utils
+import taranys.analyze_schema
+import taranys.reference_alleles
+import taranys.allele_calling
 
-import taranis.inferred_alleles
+import taranys.inferred_alleles
 
 log = logging.getLogger()
 
 # Set up rich stderr console
 stderr = rich.console.Console(
-    stderr=True, force_terminal=taranis.utils.rich_force_colors()
+    stderr=True, force_terminal=taranys.utils.rich_force_colors()
 )
 
 
@@ -40,11 +40,11 @@ def expand_wildcards(ctx, param, value):
     return None
 
 
-def run_taranis():
+def run_taranys():
     # Set up the rich traceback
     rich.traceback.install(console=stderr, width=200, word_wrap=True, extra_lines=1)
 
-    # Print taranis header
+    # Print taranys header
     stderr.print(
         "[blue]                ______           ___                     ___    ",
         highlight=False,
@@ -69,10 +69,10 @@ def run_taranis():
     # stderr.print("[green]                                          `._,._,'\n", highlight=False)
     __version__ = "3.0.0"
     stderr.print(
-        "\n" "[grey39]    Taranis version {}".format(__version__), highlight=False
+        "\n" "[grey39]    taranys version {}".format(__version__), highlight=False
     )
     # Lanch the click cli
-    taranis_cli()
+    taranys_cli()
 
 
 # Customise the order of subcommands for --help
@@ -112,7 +112,7 @@ class CustomHelpOrder(click.Group):
 
 
 @click.group(cls=CustomHelpOrder)
-@click.version_option(taranis.__version__)
+@click.version_option(taranys.__version__)
 @click.option(
     "-v",
     "--verbose",
@@ -123,7 +123,7 @@ class CustomHelpOrder(click.Group):
 @click.option(
     "-l", "--log-file", help="Save a verbose log to a file.", metavar="filename"
 )
-def taranis_cli(verbose, log_file):
+def taranys_cli(verbose, log_file):
     # Set the base logger to output DEBUG
     log.setLevel(logging.DEBUG)
 
@@ -139,7 +139,7 @@ def taranis_cli(verbose, log_file):
         log.addHandler(log_fh)
 
 
-@taranis_cli.command(help_priority=1)
+@taranys_cli.command(help_priority=1)
 @click.option(
     "-i",
     "--inputdir",
@@ -218,11 +218,11 @@ def analyze_schema(
     usegenus: str,
     cpus: int,
 ):
-    _ = taranis.utils.check_additional_programs_installed([["prokka", "--version"]])
-    schema_files = taranis.utils.get_files_in_folder(inputdir, "fasta")
+    _ = taranys.utils.check_additional_programs_installed([["prokka", "--version"]])
+    schema_files = taranys.utils.get_files_in_folder(inputdir, "fasta")
 
     results = []
-    max_cpus = taranis.utils.cpus_available()
+    max_cpus = taranys.utils.cpus_available()
     if cpus > max_cpus:
         stderr.print("[red] Number of CPUs bigger than the CPUs available")
         stderr.print("Running code with ", max_cpus)
@@ -233,7 +233,7 @@ def analyze_schema(
     with concurrent.futures.ThreadPoolExecutor(max_workers=using_cpus) as executor:
         futures = [
             executor.submit(
-                taranis.analyze_schema.parallel_execution,
+                taranys.analyze_schema.parallel_execution,
                 schema_file,
                 output,
                 remove_subset,
@@ -249,14 +249,14 @@ def analyze_schema(
         # Collect results as they complete
         for future in concurrent.futures.as_completed(futures):
             results.append(future.result())
-    _ = taranis.analyze_schema.collect_statistics(results, output, output_allele_annot)
+    _ = taranys.analyze_schema.collect_statistics(results, output, output_allele_annot)
 
     finish = time.perf_counter()
     print(f"Schema analyze finish in {round((finish-start)/60, 2)} minutes")
 
 
 # Reference alleles
-@taranis_cli.command(help_priority=2)
+@taranys_cli.command(help_priority=2)
 @click.option(
     "-s",
     "--schema",
@@ -344,26 +344,26 @@ def reference_alleles(
     cpus: int,
     force: bool,
 ):
-    _ = taranis.utils.check_additional_programs_installed(
+    _ = taranys.utils.check_additional_programs_installed(
         [["mash", "--version"], ["makeblastdb", "-version"], ["blastn", "-version"]]
     )
     start = time.perf_counter()
-    max_cpus = taranis.utils.cpus_available()
+    max_cpus = taranys.utils.cpus_available()
     if cpus > max_cpus:
         stderr.print("[red] Number of CPUs bigger than the CPUs available")
         stderr.print("Running code with ", max_cpus)
         cpus = max_cpus
-    schema_files = taranis.utils.get_files_in_folder(schema, "fasta")
+    schema_files = taranys.utils.get_files_in_folder(schema, "fasta")
 
     # Check if output folder exists
     if not force:
-        _ = taranis.utils.prompt_user_if_folder_exists(output)
+        _ = taranys.utils.prompt_user_if_folder_exists(output)
     """Create the reference alleles from the schema """
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=cpus) as executor:
         futures = [
             executor.submit(
-                taranis.reference_alleles.parallel_execution,
+                taranys.reference_alleles.parallel_execution,
                 f_file,
                 output,
                 eval_cluster,
@@ -381,12 +381,12 @@ def reference_alleles(
             except Exception as e:
                 print(e)
                 continue
-    _ = taranis.reference_alleles.collect_statistics(results, eval_cluster, output)
+    _ = taranys.reference_alleles.collect_statistics(results, eval_cluster, output)
     finish = time.perf_counter()
     print(f"Reference alleles finish in {round((finish-start)/60, 2)} minutes")
 
 
-@taranis_cli.command(help_priority=3)
+@taranys_cli.command(help_priority=3)
 @click.option(
     "-s",
     "--schema",
@@ -503,10 +503,10 @@ def allele_calling(
     increase_sequence: int,
     cpus: int,
 ):
-    _ = taranis.utils.check_additional_programs_installed(
+    _ = taranys.utils.check_additional_programs_installed(
         [["blastn", "-version"], ["makeblastdb", "-version"], ["mafft", "--version"]]
     )
-    schema_ref_files = taranis.utils.get_files_in_folder(reference, "fasta")
+    schema_ref_files = taranys.utils.get_files_in_folder(reference, "fasta")
     if len(schema_ref_files) == 0:
         log.error("Referenc allele folder %s does not have any fasta file", schema)
         stderr.print("[red] reference allele folder does not have any fasta file")
@@ -514,9 +514,9 @@ def allele_calling(
 
     # Check if output folder exists
     if not force:
-        _ = taranis.utils.prompt_user_if_folder_exists(output)
+        _ = taranys.utils.prompt_user_if_folder_exists(output)
     # Filter fasta files from reference folder
-    max_cpus = taranis.utils.cpus_available()
+    max_cpus = taranys.utils.cpus_available()
     if cpus > max_cpus:
         stderr.print("[red] Number of CPUs bigger than the CPUs available")
         stderr.print("Running code with ", max_cpus)
@@ -525,11 +525,11 @@ def allele_calling(
     stderr.print("[green] Reading annotation file")
     log.info("Reading annotation file")
     map_pred = [["gene", 7], ["product", 8], ["allele_quality", 9]]
-    prediction_data = taranis.utils.read_compressed_file(
+    prediction_data = taranys.utils.read_compressed_file(
         annotation, separator=",", index_key=1, mapping=map_pred
     )
     # Create the instanace for inference alleles
-    inf_allele_obj = taranis.inferred_alleles.InferredAllele()
+    inf_allele_obj = taranys.inferred_alleles.InferredAllele()
     """Analyze the sample file against schema to identify alleles
     """
 
@@ -539,7 +539,7 @@ def allele_calling(
     with concurrent.futures.ThreadPoolExecutor(max_workers=cpus) as executor:
         futures = [
             executor.submit(
-                taranis.allele_calling.parallel_execution,
+                taranys.allele_calling.parallel_execution,
                 assembly_file,
                 schema,
                 prediction_data,
@@ -562,7 +562,7 @@ def allele_calling(
                 print(e)
                 continue
 
-    _ = taranis.allele_calling.collect_data(
+    _ = taranys.allele_calling.collect_data(
         results, output, snp, alignment, schema_ref_files, cpus
     )
     finish = time.perf_counter()
@@ -570,7 +570,7 @@ def allele_calling(
     log.info("Allele calling finish in %s minutes", round((finish - start) / 60, 2))
 
 
-@taranis_cli.command(help_priority=3)
+@taranys_cli.command(help_priority=3)
 @click.option(
     "-a",
     "--alleles",
@@ -646,13 +646,13 @@ def distance_matrix(
     plot_filter: bool,
 ):
     # Check if file exists
-    if not taranis.utils.file_exists(alleles):
+    if not taranys.utils.file_exists(alleles):
         log.error("Alleles matrix file %s does not exist", alleles)
         stderr.print("[red] Alleles matrix file does not exist")
         sys.exit(1)
     # Check if output folder exists
     if not force:
-        _ = taranis.utils.prompt_user_if_folder_exists(output)
+        _ = taranys.utils.prompt_user_if_folder_exists(output)
     start = time.perf_counter()
     # filter the alleles matrix according to the thresholds and filters
     allele_matrix = pd.read_csv(alleles, sep=",", index_col=0, header=0, dtype=str)
@@ -665,7 +665,7 @@ def distance_matrix(
     if plot_filter:
         to_mask.append("PLOT")
 
-    allele_matrix_fil = taranis.utils.filter_df(
+    allele_matrix_fil = taranys.utils.filter_df(
         allele_matrix,
         locus_missing_threshold,
         sample_missing_threshold,
@@ -674,12 +674,12 @@ def distance_matrix(
     allele_matrix_fil.to_csv(f"{output}/allele_matrix_fil.csv")
 
     # Create the distance matrix
-    d_matrix_obj = taranis.distance.HammingDistance(allele_matrix)
+    d_matrix_obj = taranys.distance.HammingDistance(allele_matrix)
     distance_matrix = d_matrix_obj.create_matrix(to_mask)
     distance_matrix.to_csv(f"{output}/distance_matrix.csv")
 
     # Create the filtered distance matrix
-    d_matrix_core_obj = taranis.distance.HammingDistance(allele_matrix_fil)
+    d_matrix_core_obj = taranys.distance.HammingDistance(allele_matrix_fil)
     distance_matrix_core = d_matrix_core_obj.create_matrix(to_mask)
     distance_matrix_core.to_csv(f"{output}/distance_matrix_core.csv")
 

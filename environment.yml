@@ -1,4 +1,4 @@
-name: taranis_env
+name: taranys_env
 channels:
   - conda-forge
   - bioconda

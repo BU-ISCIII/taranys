@@ -2,7 +2,7 @@ import logging
 import os
 import rich
 import subprocess
-import taranis.utils
+import taranys.utils
 
 from pathlib import Path
 from Bio.Blast.Applications import NcbiblastnCommandline
@@ -12,7 +12,7 @@ stderr = rich.console.Console(
     stderr=True,
     style="dim",
     highlight=False,
-    force_terminal=taranis.utils.rich_force_colors(),
+    force_terminal=taranys.utils.rich_force_colors(),
 )
 
 
