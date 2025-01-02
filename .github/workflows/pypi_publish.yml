@@ -36,7 +36,7 @@ jobs:
       runs-on: ubuntu-latest
       environment:
         name: pypi
-        url: https://pypi.org/p/buisciii-tools
+        url: https://pypi.org/p/taranys
       permissions:
         id-token: write
       steps:
