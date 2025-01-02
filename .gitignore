@@ -9,6 +9,7 @@ __pycache__/
 *.log.*
 # Projects files
 *.komodoproject
+*.vscode/
 
 # Distribution / packaging
 .Python
