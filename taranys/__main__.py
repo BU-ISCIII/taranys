@@ -142,7 +142,7 @@ def taranys_cli(verbose, log_file):
 @taranys_cli.command(help_priority=1)
 @click.option(
     "-i",
-    "--inputdir",
+    "--input",
     required=True,
     multiple=False,
     type=click.Path(),
@@ -207,7 +207,7 @@ def taranys_cli(verbose, log_file):
     help="Number of cpus used for execution",
 )
 def analyze_schema(
-    inputdir: str,
+    input: str,
     output: str,
     remove_subset: bool,
     remove_duplicated: bool,
@@ -219,7 +219,7 @@ def analyze_schema(
     cpus: int,
 ):
     _ = taranys.utils.check_additional_programs_installed([["prokka", "--version"]])
-    schema_files = taranys.utils.get_files_in_folder(inputdir, "fasta")
+    schema_files = taranys.utils.get_files_in_folder(input, "fasta")
 
     results = []
     max_cpus = taranys.utils.cpus_available()
