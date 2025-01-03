@@ -4,11 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.1dev] - 202X-XX-XX : https://github.com/BU-ISCIII/relecov-tools/releases/tag/
+## [3.0.1] - 202X-XX-XX : https://github.com/BU-ISCIII/relecov-tools/releases/tag/
+
+Same version as before for proper publish to pip.
 
 ### Credits
 
 Code contributions to the release:
+
+Sara Monzon - [saramonzon](https://github.com/saramonzon)
 
 ### Modules
 

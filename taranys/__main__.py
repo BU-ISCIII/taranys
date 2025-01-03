@@ -67,7 +67,7 @@ def run_taranys():
     )
 
     # stderr.print("[green]                                          `._,._,'\n", highlight=False)
-    __version__ = "3.0.0"
+    __version__ = "3.0.1"
     stderr.print(
         "\n" "[grey39]    taranys version {}".format(__version__), highlight=False
     )
